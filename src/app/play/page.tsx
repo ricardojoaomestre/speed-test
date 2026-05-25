@@ -1,16 +1,19 @@
-import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { db } from '@/db';
+import { users } from '@/db/schema';
 
 export default function PlayPage() {
   async function registerUser(formData: FormData) {
-    "use server";
+    'use server';
 
-    const rawFormData = {
-      username: formData.get("name"),
-    };
+    const name = formData.get('name');
+    if (typeof name !== 'string' || !name.trim()) {
+      return;
+    }
 
-    console.log(rawFormData);
+    await db.insert(users).values({ name: name.trim() });
   }
 
   return (

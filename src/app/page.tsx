@@ -1,14 +1,27 @@
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { auth } from '@/auth';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
+    <div className="flex h-screen flex-col items-center justify-center">
       <div className="flex flex-col gap-4">
-        <h1>Hello world</h1>
-        <Button asChild>
-          <Link href="/play">Start</Link>
-        </Button>
+        {session?.user ? (
+          <>
+            <p className="text-center text-muted-foreground">
+              Signed in as {session.user.name ?? session.user.email}
+            </p>
+            <Button asChild>
+              <Link href="/dashboard">Go to dashboard</Link>
+            </Button>
+          </>
+        ) : (
+          <Button asChild>
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
+        )}
       </div>
     </div>
   );

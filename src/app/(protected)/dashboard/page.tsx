@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import FileImport from "./components/FileImport";
+import FileImport from "./components/file-import";
 
 export default async function DashboardPage() {
   const session = await auth();

@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import {
   importSpreadsheetFile,
   type ImportedSpreadsheetRow,
-} from '@/app/(protected)/dashboard/actions/import-file';
+} from "@/app/(protected)/dashboard/actions/import-file";
 import {
   importColumns,
   importColumnsWithBalance,
-} from '@/app/(protected)/dashboard/components/import-columns';
-import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
-import { Button } from '@/components/ui/button';
-import { Field, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { useSpreadsheetFile } from '@/hooks/use-spreadsheet-file';
+} from "@/app/(protected)/dashboard/components/import-columns";
+import { ImportDataTable } from "@/app/(protected)/dashboard/components/import-data-table";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { useSpreadsheetFile } from "@/hooks/use-spreadsheet-file";
 
 const FileImport = () => {
   const formRef = useRef<HTMLFormElement>(null);
@@ -72,7 +72,7 @@ const FileImport = () => {
           disabled={validation?.ok !== true || isPending}
           className="mt-4"
         >
-          {isPending ? 'Importing…' : 'Import'}
+          {isPending ? "Importing…" : "Import"}
         </Button>
       </form>
 
@@ -81,7 +81,7 @@ const FileImport = () => {
       {parsedData && (
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            {parsedData.length} row{parsedData.length === 1 ? '' : 's'} imported
+            {parsedData.length} row{parsedData.length === 1 ? "" : "s"} imported
           </p>
           <ImportDataTable columns={columns} data={parsedData} />
         </div>

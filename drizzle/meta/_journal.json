@@ -15,6 +15,13 @@
       "when": 1780045300684,
       "tag": "0001_closed_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780084547858,
+      "tag": "0002_stiff_wendigo",
+      "breakpoints": true
     }
   ]
 }

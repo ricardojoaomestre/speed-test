@@ -20,6 +20,7 @@ export default async function TransactionsPage() {
       value: transactions.value,
       importId: transactions.importId,
       importFilename: imports.filename,
+      merchant: transactions.merchant,
     })
     .from(transactions)
     .innerJoin(imports, eq(transactions.importId, imports.id))

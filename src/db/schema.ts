@@ -102,6 +102,7 @@ export const imports = pgTable('import', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   status: text('status').$type<ImportStatus>().notNull(),
+  merchant: text('merchant').notNull(),
 });
 
 export const transactions = pgTable('transaction', {
@@ -115,6 +116,7 @@ export const transactions = pgTable('transaction', {
   description: text('description').notNull(),
   category: text('category'),
   value: numeric('value', { precision: 14, scale: 2 }).notNull(),
+  merchant: text('merchant').notNull(),
 });
 
 export const importsRelations = relations(imports, ({ one, many }) => ({

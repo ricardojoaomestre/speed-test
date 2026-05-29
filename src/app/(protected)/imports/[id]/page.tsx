@@ -12,6 +12,7 @@ import {
 import { db } from '@/db';
 import { imports, transactions, users } from '@/db/schema';
 import { formatDisplayDate, formatImportStatus } from '@/lib/formatters';
+import { getMerchantLabelOrSlug } from '@/lib/merchants';
 import { importStatusBadgeVariant } from '@/lib/status-badge';
 
 type ImportDetailPageProps = {
@@ -28,6 +29,7 @@ export default async function ImportDetailPage({ params }: ImportDetailPageProps
       importedAt: imports.importedAt,
       rowCount: imports.rowCount,
       status: imports.status,
+      merchant: imports.merchant,
       importerName: users.name,
       importerEmail: users.email,
     })
@@ -84,6 +86,12 @@ export default async function ImportDetailPage({ params }: ImportDetailPageProps
             <Badge variant={importStatusBadgeVariant(importRecord.status)}>
               {formatImportStatus(importRecord.status)}
             </Badge>
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Merchant</dt>
+          <dd className="font-medium">
+            {getMerchantLabelOrSlug(importRecord.merchant)}
           </dd>
         </div>
         <div>

@@ -9,6 +9,7 @@ export type ImportJobRow = {
   importedAt: Date;
   rowCount: number;
   status: ImportStatus;
+  merchant: string;
 };
 
 export async function getImports(limit?: number): Promise<ImportJobRow[]> {
@@ -19,6 +20,7 @@ export async function getImports(limit?: number): Promise<ImportJobRow[]> {
       importedAt: imports.importedAt,
       rowCount: imports.rowCount,
       status: imports.status,
+      merchant: imports.merchant,
     })
     .from(imports)
     .orderBy(desc(imports.importedAt));

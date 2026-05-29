@@ -10,9 +10,11 @@ import {
   isValidImportRow,
   type ImportedSpreadsheetRow,
 } from '@/lib/file-import';
+import { isMerchantSlug, type MerchantSlug } from '@/lib/merchants';
 
 export type ConfirmImportInput = {
   filename: string;
+  merchant: MerchantSlug;
   rows: ImportedSpreadsheetRow[];
 };
 
@@ -48,6 +50,12 @@ export async function confirmImport(
     return { ok: false, error: 'No rows to import.' };
   }
 
+  if (!isMerchantSlug(input.merchant)) {
+    return { ok: false, error: 'A valid merchant is required.' };
+  }
+
+  const merchant = input.merchant;
+
   const validRows = input.rows.filter(isValidImportRow);
 
   if (validRows.length === 0) {
@@ -70,6 +78,7 @@ export async function confirmImport(
       rowCount: validRows.length,
       userId: session.user.id,
       status,
+      merchant,
     });
 
     await db.insert(transactions).values(
@@ -79,6 +88,7 @@ export async function confirmImport(
         category: null,
         value: formatTransactionValue(row.value!),
         importId,
+        merchant,
       })),
     );
   } catch (error) {

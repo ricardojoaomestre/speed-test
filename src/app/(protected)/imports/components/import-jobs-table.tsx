@@ -7,6 +7,7 @@ import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-d
 import { Badge } from '@/components/ui/badge';
 import { formatDisplayDate, formatImportStatus } from '@/lib/formatters';
 import type { ImportJobRow } from '@/lib/imports/get-imports';
+import { getMerchantLabelOrSlug } from '@/lib/merchants';
 import { importStatusBadgeVariant } from '@/lib/status-badge';
 
 const columns: ColumnDef<ImportJobRow>[] = [
@@ -21,6 +22,11 @@ const columns: ColumnDef<ImportJobRow>[] = [
         {row.original.filename}
       </Link>
     ),
+  },
+  {
+    accessorKey: 'merchant',
+    header: 'Merchant',
+    cell: ({ row }) => getMerchantLabelOrSlug(row.original.merchant),
   },
   {
     accessorKey: 'importedAt',

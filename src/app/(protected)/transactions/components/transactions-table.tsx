@@ -5,6 +5,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
 import { formatDisplayDate, formatDisplayNumber } from '@/lib/formatters';
+import { getMerchantLabelOrSlug } from '@/lib/merchants';
 
 export type TransactionRow = {
   id: string;
@@ -14,6 +15,7 @@ export type TransactionRow = {
   value: string;
   importId: string;
   importFilename: string;
+  merchant: string;
 };
 
 const columns: ColumnDef<TransactionRow>[] = [
@@ -42,6 +44,11 @@ const columns: ColumnDef<TransactionRow>[] = [
         {formatDisplayNumber(row.getValue('value'))}
       </div>
     ),
+  },
+  {
+    accessorKey: 'merchant',
+    header: 'Merchant',
+    cell: ({ row }) => getMerchantLabelOrSlug(row.original.merchant),
   },
   {
     id: 'import',

@@ -18,3 +18,10 @@ export type ParsedSpreadsheetJson = {
 export type SpreadsheetValidationResult =
   | { ok: true; fileType: SpreadsheetFileType }
   | { ok: false; error: string };
+
+export type ImportedSpreadsheetRow = {
+  date: string | null;
+  description: string;
+  value: number | null;
+  balance?: number | null;
+};

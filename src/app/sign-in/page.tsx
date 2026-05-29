@@ -1,4 +1,5 @@
 import { auth, signIn } from '@/auth';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { redirect } from 'next/navigation';
 
@@ -26,9 +27,11 @@ export default async function SignInPage({
       </div>
 
       {error && (
-        <p className="text-sm text-destructive">
-          Sign in failed. Please try again.
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>
+            Sign in failed. Please try again.
+          </AlertDescription>
+        </Alert>
       )}
 
       <form

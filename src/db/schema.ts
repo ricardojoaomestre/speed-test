@@ -1,6 +1,8 @@
+import { relations } from 'drizzle-orm';
 import {
   boolean,
   integer,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -83,3 +85,49 @@ export const authenticators = pgTable(
     }),
   })
 );
+
+export const importStatusEnum = ['completed', 'partial', 'failed'] as const;
+export type ImportStatus = (typeof importStatusEnum)[number];
+
+export const imports = pgTable('import', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  filename: text('filename').notNull(),
+  importedAt: timestamp('importedAt', { mode: 'date' })
+    .notNull()
+    .defaultNow(),
+  rowCount: integer('rowCount').notNull(),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  status: text('status').$type<ImportStatus>().notNull(),
+});
+
+export const transactions = pgTable('transaction', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  importId: text('importId')
+    .notNull()
+    .references(() => imports.id, { onDelete: 'cascade' }),
+  date: timestamp('date', { mode: 'date' }).notNull(),
+  description: text('description').notNull(),
+  category: text('category'),
+  value: numeric('value', { precision: 14, scale: 2 }).notNull(),
+});
+
+export const importsRelations = relations(imports, ({ one, many }) => ({
+  user: one(users, {
+    fields: [imports.userId],
+    references: [users.id],
+  }),
+  transactions: many(transactions),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  import: one(imports, {
+    fields: [transactions.importId],
+    references: [imports.id],
+  }),
+}));

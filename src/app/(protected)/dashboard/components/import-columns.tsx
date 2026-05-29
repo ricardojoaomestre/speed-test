@@ -1,64 +1,90 @@
-'use client';
+"use client";
+import type { ColumnDef } from "@tanstack/react-table";
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ImportedSpreadsheetRow } from "@/lib/file-import";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatDisplayDate, formatDisplayNumber } from "@/lib/formatters";
+import type { RowValidation } from "@/lib/file-import";
 
-import type { ImportedSpreadsheetRow } from '@/app/(protected)/dashboard/actions/import-file';
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-});
-
-const numberFormatter = new Intl.NumberFormat(undefined, {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const formatDate = (value: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+export type PreviewRow = ImportedSpreadsheetRow & {
+  validation: RowValidation;
 };
 
-const formatNumber = (value: number | null | undefined) => {
-  if (value === null || value === undefined) return '—';
-  return numberFormatter.format(value);
+const validationColumn: ColumnDef<PreviewRow> = {
+  id: "validation",
+  header: "Validation",
+  cell: ({ row }) => {
+    const validation = row.original.validation;
+
+    if (validation.valid) {
+      return <Badge variant="secondary">Valid</Badge>;
+    }
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="destructive" className="cursor-default">
+            Invalid
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <ul className="list-inside list-disc space-y-0.5">
+            {validation.errors.map((error) => (
+              <li key={error}>{error}</li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    );
+  },
 };
 
-const balanceColumn: ColumnDef<ImportedSpreadsheetRow> = {
-  accessorKey: 'balance',
+const balanceColumn: ColumnDef<PreviewRow> = {
+  accessorKey: "balance",
   header: () => <div className="text-right">Balance</div>,
   cell: ({ row }) => (
     <div className="text-right tabular-nums">
-      {formatNumber(row.getValue('balance'))}
+      {formatDisplayNumber(row.getValue("balance"))}
     </div>
   ),
 };
 
-export const importColumns: ColumnDef<ImportedSpreadsheetRow>[] = [
+const baseColumns: ColumnDef<PreviewRow>[] = [
+  validationColumn,
   {
-    accessorKey: 'date',
-    header: 'Date',
-    cell: ({ row }) => formatDate(row.getValue('date')),
+    accessorKey: "date",
+    header: "Date",
+    cell: ({ row }) => formatDisplayDate(row.getValue("date")),
   },
   {
-    accessorKey: 'description',
-    header: 'Description',
+    accessorKey: "description",
+    header: "Description",
     cell: ({ row }) => (
-      <span className="whitespace-normal">{row.getValue('description')}</span>
+      <span className="whitespace-normal">{row.getValue("description")}</span>
     ),
   },
   {
-    accessorKey: 'value',
+    accessorKey: "value",
     header: () => <div className="text-right">Value</div>,
     cell: ({ row }) => (
       <div className="text-right tabular-nums">
-        {formatNumber(row.getValue('value'))}
+        {formatDisplayNumber(row.getValue("value"))}
       </div>
     ),
   },
 ];
 
-export const importColumnsWithBalance: ColumnDef<ImportedSpreadsheetRow>[] = [
-  ...importColumns,
-  balanceColumn,
-];
+export function getPreviewColumns(
+  includeBalance: boolean,
+): ColumnDef<PreviewRow>[] {
+  if (includeBalance) {
+    return [...baseColumns, balanceColumn];
+  }
+  return baseColumns;
+}
+

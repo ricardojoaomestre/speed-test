@@ -8,6 +8,11 @@ import {
 } from '@tanstack/react-table';
 
 import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
   Table,
   TableBody,
   TableCell,
@@ -63,8 +68,12 @@ export function ImportDataTable<TData, TValue>({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
+              <TableCell colSpan={columns.length} className="p-0">
+                <Empty className="border-0 py-12">
+                  <EmptyHeader>
+                    <EmptyTitle>No results</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               </TableCell>
             </TableRow>
           )}

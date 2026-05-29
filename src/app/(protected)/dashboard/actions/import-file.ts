@@ -3,16 +3,10 @@
 import {
   parseLocalizedNumber,
   parseSpreadsheetToJson,
+  type ImportedSpreadsheetRow,
   type SpreadsheetRow,
   validateSpreadsheetFile,
 } from "@/lib/file-import";
-
-export type ImportedSpreadsheetRow = {
-  date: string | null;
-  description: string;
-  value: number | null;
-  balance?: number | null;
-};
 
 export type ImportSpreadsheetResult =
   | { ok: true; data: ImportedSpreadsheetRow[] }

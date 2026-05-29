@@ -1,0 +1,66 @@
+'use client';
+
+import Link from 'next/link';
+import type { ColumnDef } from '@tanstack/react-table';
+
+import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
+import { formatDisplayDate, formatDisplayNumber } from '@/lib/formatters';
+
+export type TransactionRow = {
+  id: string;
+  date: Date;
+  description: string;
+  category: string | null;
+  value: string;
+  importId: string;
+  importFilename: string;
+};
+
+const columns: ColumnDef<TransactionRow>[] = [
+  {
+    accessorKey: 'date',
+    header: 'Date',
+    cell: ({ row }) => formatDisplayDate(row.original.date),
+  },
+  {
+    accessorKey: 'description',
+    header: 'Description',
+    cell: ({ row }) => (
+      <span className="whitespace-normal">{row.getValue('description')}</span>
+    ),
+  },
+  {
+    accessorKey: 'category',
+    header: 'Category',
+    cell: ({ row }) => row.original.category ?? '—',
+  },
+  {
+    accessorKey: 'value',
+    header: () => <div className="text-right">Value</div>,
+    cell: ({ row }) => (
+      <div className="text-right tabular-nums">
+        {formatDisplayNumber(row.getValue('value'))}
+      </div>
+    ),
+  },
+  {
+    id: 'import',
+    header: 'Import',
+    cell: ({ row }) => (
+      <Link
+        href={`/imports/${row.original.importId}`}
+        className="text-primary underline-offset-4 hover:underline"
+      >
+        {row.original.importFilename}
+      </Link>
+    ),
+  },
+];
+
+type TransactionsTableProps = {
+  data: TransactionRow[];
+};
+
+export function TransactionsTable({ data }: TransactionsTableProps) {
+  return <ImportDataTable columns={columns} data={data} />;
+}

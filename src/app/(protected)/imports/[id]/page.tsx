@@ -12,23 +12,11 @@ import {
 import { db } from '@/db';
 import { imports, transactions, users } from '@/db/schema';
 import { formatDisplayDate, formatImportStatus } from '@/lib/formatters';
+import { importStatusBadgeVariant } from '@/lib/status-badge';
 
 type ImportDetailPageProps = {
   params: Promise<{ id: string }>;
 };
-
-function importStatusVariant(
-  status: string,
-): 'default' | 'secondary' | 'destructive' {
-  switch (status) {
-    case 'completed':
-      return 'default';
-    case 'failed':
-      return 'destructive';
-    default:
-      return 'secondary';
-  }
-}
 
 export default async function ImportDetailPage({ params }: ImportDetailPageProps) {
   const { id } = await params;
@@ -93,7 +81,7 @@ export default async function ImportDetailPage({ params }: ImportDetailPageProps
         <div>
           <dt className="text-muted-foreground">Status</dt>
           <dd>
-            <Badge variant={importStatusVariant(importRecord.status)}>
+            <Badge variant={importStatusBadgeVariant(importRecord.status)}>
               {formatImportStatus(importRecord.status)}
             </Badge>
           </dd>

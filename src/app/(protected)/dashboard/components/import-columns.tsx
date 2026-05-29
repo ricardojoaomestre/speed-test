@@ -22,7 +22,7 @@ const validationColumn: ColumnDef<PreviewRow> = {
     const validation = row.original.validation;
 
     if (validation.valid) {
-      return <Badge variant="secondary">Valid</Badge>;
+      return <Badge variant="success">Valid</Badge>;
     }
 
     return (

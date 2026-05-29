@@ -1,8 +1,11 @@
-import { auth } from "@/auth";
-import FileImport from "./components/file-import";
+import { auth } from '@/auth';
+import { getImports } from '@/lib/imports/get-imports';
+
+import { DashboardContent } from './components/dashboard-content';
 
 export default async function DashboardPage() {
   const session = await auth();
+  const recentImports = await getImports(5);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-4 p-6">
@@ -13,7 +16,7 @@ export default async function DashboardPage() {
       <p className="text-sm text-muted-foreground">
         User id: {session?.user?.id}
       </p>
-      <FileImport />
+      <DashboardContent recentImports={recentImports} />
     </div>
   );
 }

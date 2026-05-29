@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { confirmImport } from '@/app/(protected)/dashboard/actions/confirm-import';
 import { importSpreadsheetFile } from '@/app/(protected)/dashboard/actions/import-file';
@@ -21,7 +21,11 @@ import {
   validateImportRow,
 } from '@/lib/file-import';
 
-const FileImport = () => {
+type FileImportProps = {
+  onPreviewChange?: (active: boolean) => void;
+};
+
+const FileImport = ({ onPreviewChange }: FileImportProps) => {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const { validation, validate, clear } = useSpreadsheetFile();
@@ -47,6 +51,10 @@ const FileImport = () => {
   }, [parsedData]);
 
   const validCount = previewRows?.filter((row) => row.validation.valid).length ?? 0;
+
+  useEffect(() => {
+    onPreviewChange?.(!!previewRows && !!filename);
+  }, [previewRows, filename, onPreviewChange]);
 
   const resetPreview = () => {
     setParsedData(null);

@@ -1,0 +1,39 @@
+---
+description: Prefer shadcn/ui components over custom HTML + Tailwind primitives
+alwaysApply: true
+---
+
+# UI components — prefer shadcn/ui
+
+Before building custom UI primitives, check whether [shadcn/ui](https://ui.shadcn.com/docs/components/) already provides a suitable component.
+
+## Workflow
+
+1. **Check the catalog** — Browse [Components](https://ui.shadcn.com/docs/components/) for badges, dialogs, tables, tooltips, etc.
+2. **Use what exists** — Import from `@/components/ui/<name>` when the component is already in the project.
+3. **Add if missing** — Install via the CLI (do not hand-copy from docs unless the CLI is unavailable):
+
+   ```bash
+   npx shadcn@latest add <component>
+   ```
+
+4. **Compose, don’t reinvent** — Extend shadcn components with `className`, variants, or composition. Do not recreate the same pattern with raw HTML + Tailwind.
+
+## Examples
+
+| Need | Do | Don’t |
+|------|-----|--------|
+| Status label | `<Badge variant="…">` | `<span className="rounded-full px-2 …">` |
+| Modal / drawer | `Dialog`, `Sheet`, `Alert Dialog` | Custom fixed overlay + div |
+| Data grid | `Table` (+ [Data Table](https://ui.shadcn.com/docs/components/data-table) when sorting/filtering) | Hand-rolled `<table>` styling |
+| Tooltip | `Tooltip` | `title` only or custom popover div |
+| Form field | `Field`, `Input`, `Label` | Unlabeled `<input>` with ad-hoc layout |
+
+## Already installed
+
+Components live under `src/components/ui/`. Check that folder before adding duplicates. Current set includes: `alert`, `badge`, `button`, `empty`, `field`, `input`, `label`, `separator`, `table`, `tooltip` (list may grow as components are added).
+
+## When a custom component is OK
+
+- No shadcn equivalent exists and the [registry directory](https://ui.shadcn.com/docs/directory) has nothing suitable.
+- The UI is **domain-specific** (e.g. `FileImport`, `ImportTransactionsTable`) — build it by **composing** shadcn primitives, not by replacing them with styled spans and divs.

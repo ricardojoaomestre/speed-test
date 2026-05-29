@@ -1,13 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useTransition } from 'react';
 
 import { confirmImport } from '@/app/(protected)/dashboard/actions/confirm-import';
-import {
-  importSpreadsheetFile,
-  type ParsedImportRow,
-} from '@/app/(protected)/dashboard/actions/import-file';
+import { importSpreadsheetFile } from '@/app/(protected)/dashboard/actions/import-file';
 import {
   getPreviewColumns,
   type PreviewRow,
@@ -25,12 +22,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useImportPreviewState } from '@/hooks/use-import-preview-state';
 import { useSpreadsheetFile } from '@/hooks/use-spreadsheet-file';
 import { validateImportRow } from '@/lib/file-import';
 import {
   isMerchantSlug,
   MERCHANTS_SORTED_BY_LABEL,
-  type MerchantSlug,
 } from '@/lib/merchants';
 
 type FileImportProps = {
@@ -41,10 +38,8 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const { validation, validate, clear } = useSpreadsheetFile();
-  const [parsedData, setParsedData] = useState<ParsedImportRow[] | null>(null);
-  const [filename, setFilename] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [merchant, setMerchant] = useState<MerchantSlug | undefined>();
+  const [state, dispatch] = useImportPreviewState();
+  const { parsedData, filename, error, merchant } = state;
   const [isParsing, startParseTransition] = useTransition();
   const [isConfirming, startConfirmTransition] = useTransition();
 
@@ -78,27 +73,14 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
     onPreviewChange?.(!!previewRows && !!filename);
   }, [previewRows, filename, onPreviewChange]);
 
-  const clearPreview = () => {
-    setParsedData(null);
-    setFilename(null);
-    setError(null);
+  const clearPreviewSideEffects = () => {
     formRef.current?.reset();
     clear();
   };
 
-  const resetPreview = () => {
-    clearPreview();
-    setMerchant(undefined);
-  };
-
   const handleMerchantChange = (value: string) => {
     if (!isMerchantSlug(value)) return;
-
-    setMerchant(value);
-
-    if (parsedData) {
-      clearPreview();
-    }
+    dispatch({ type: 'set-merchant', merchant: value });
   };
 
   const summaryParts = previewRows
@@ -139,10 +121,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
             if (!merchant) return;
 
             startParseTransition(async () => {
-              setError(null);
-              setParsedData(null);
-              setFilename(null);
-
+              dispatch({ type: 'parse-started' });
               formData.set('merchant', merchant);
 
               const file = formData.get('file');
@@ -152,12 +131,15 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
               const result = await importSpreadsheetFile(formData);
 
               if (!result.ok) {
-                setError(result.error);
+                dispatch({ type: 'parse-failed', error: result.error });
                 return;
               }
 
-              setParsedData(result.data);
-              setFilename(parsedFilename);
+              dispatch({
+                type: 'parse-succeeded',
+                data: result.data,
+                filename: parsedFilename,
+              });
               formRef.current?.reset();
               clear();
             });
@@ -212,7 +194,10 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
                 type="button"
                 variant="outline"
                 disabled={isConfirming}
-                onClick={resetPreview}
+                onClick={() => {
+                  dispatch({ type: 'reset' });
+                  clearPreviewSideEffects();
+                }}
               >
                 Cancel
               </Button>
@@ -221,8 +206,6 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
                 disabled={isConfirming}
                 onClick={() => {
                   startConfirmTransition(async () => {
-                    setError(null);
-
                     const result = await confirmImport({
                       filename,
                       merchant,
@@ -230,7 +213,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
                     });
 
                     if (!result.ok) {
-                      setError(result.error);
+                      dispatch({ type: 'confirm-failed', error: result.error });
                       return;
                     }
 

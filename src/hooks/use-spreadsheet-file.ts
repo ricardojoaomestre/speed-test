@@ -1,44 +1,68 @@
-"use client";
+'use client';
 
-import { useCallback, useState } from "react";
+import { useCallback, useReducer } from 'react';
 
 import {
   type SpreadsheetFileType,
   type SpreadsheetValidationResult,
   validateSpreadsheetFile,
-} from "@/lib/file-import";
+} from '@/lib/file-import';
+
+type SpreadsheetFileState = {
+  file: File | null;
+  validation: SpreadsheetValidationResult | null;
+};
+
+type SpreadsheetFileAction =
+  | { type: 'set-file'; file: File; validation: SpreadsheetValidationResult }
+  | { type: 'clear' };
+
+const initialState: SpreadsheetFileState = {
+  file: null,
+  validation: null,
+};
+
+function spreadsheetFileReducer(
+  state: SpreadsheetFileState,
+  action: SpreadsheetFileAction,
+): SpreadsheetFileState {
+  switch (action.type) {
+    case 'clear':
+      return initialState;
+    case 'set-file':
+      return {
+        file: action.file,
+        validation: action.validation,
+      };
+  }
+}
 
 export function useSpreadsheetFile() {
-  const [file, setFile] = useState<File | null>(null);
-  const [validation, setValidation] =
-    useState<SpreadsheetValidationResult | null>(null);
+  const [state, dispatch] = useReducer(spreadsheetFileReducer, initialState);
 
   const validate = useCallback((next: File | null) => {
-    setFile(next);
-
     if (!next) {
-      setValidation(null);
+      dispatch({ type: 'clear' });
       return null;
     }
 
-    const result = validateSpreadsheetFile(next);
-    setValidation(result);
-    return result;
+    const validation = validateSpreadsheetFile(next);
+    dispatch({ type: 'set-file', file: next, validation });
+    return validation;
   }, []);
 
   const clear = useCallback(() => {
-    setFile(null);
-    setValidation(null);
+    dispatch({ type: 'clear' });
   }, []);
 
   const fileType: SpreadsheetFileType | null =
-    validation?.ok === true ? validation.fileType : null;
+    state.validation?.ok === true ? state.validation.fileType : null;
 
   return {
-    file,
+    file: state.file,
     fileType,
-    validation,
-    isValid: validation?.ok === true,
+    validation: state.validation,
+    isValid: state.validation?.ok === true,
     validate,
     clear,
   };

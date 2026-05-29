@@ -1,0 +1,51 @@
+---
+description: When to use useReducer, Context, or Zustand instead of useState
+alwaysApply: true
+---
+
+# React state — pick the right tool
+
+## Local state: `useState` → `useReducer`
+
+Start with `useState`. Escalate to `useReducer` when local state gets tangled — especially when **one user action updates several related fields** or you need predictable transitions.
+
+```tsx
+// ❌ Multiple setStates that must stay in sync
+setParsedData(null);
+setFilename(null);
+setMerchant(undefined);
+setError(null);
+
+// ✅ One action, one dispatch
+dispatch({ type: 'reset-preview' });
+```
+
+**Signals to switch:** 3+ `useState` calls for one feature, coordinated updates, or state logic you can't read at a glance.
+
+## Shared state: Context vs Zustand
+
+When state **isn't local to one component**, don't prop-drill or duplicate it.
+
+| Situation | Prefer |
+|-----------|--------|
+| Small tree, infrequent updates, few consumers (theme, auth session) | **React Context** |
+| App-wide or cross-route state, many subscribers, or logic outside React | **[Zustand](https://zustand.docs.pmnd.rs/learn/getting-started/introduction)** |
+
+```tsx
+// Zustand — store in src/stores/, no provider required
+import { create } from 'zustand';
+
+export const useImportStore = create((set) => ({
+  merchant: undefined,
+  setMerchant: (merchant) => set({ merchant }),
+}));
+```
+
+## Defaults
+
+- **Local + simple** → `useState`
+- **Local + complex transitions** → `useReducer`
+- **Shared + narrow scope** → Context
+- **Shared + broad or persistent** → Zustand
+
+Don't reach for global state when lifting one level or a custom hook is enough.

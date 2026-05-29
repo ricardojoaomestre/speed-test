@@ -7,9 +7,12 @@ import { db } from '@/db';
 import { imports, type ImportStatus, transactions } from '@/db/schema';
 import { formatDbError } from '@/lib/db/format-db-error';
 import {
-  isValidImportRow,
+  classifyImportRows,
+  formatTransactionValueForKey,
+  isImportableRow,
   type ImportedSpreadsheetRow,
 } from '@/lib/file-import';
+import { getExistingDuplicateKeys } from '@/lib/file-import/get-existing-duplicate-keys';
 import { isMerchantSlug, type MerchantSlug } from '@/lib/merchants';
 
 export type ConfirmImportInput = {
@@ -27,10 +30,6 @@ export type ConfirmImportResult =
       skippedCount: number;
     }
   | { ok: false; error: string };
-
-function formatTransactionValue(value: number): string {
-  return value.toFixed(2);
-}
 
 export async function confirmImport(
   input: ConfirmImportInput,
@@ -55,17 +54,11 @@ export async function confirmImport(
   }
 
   const merchant = input.merchant;
+  const existingKeys = await getExistingDuplicateKeys(merchant);
+  const classifiedRows = classifyImportRows(input.rows, existingKeys, merchant);
+  const importableRows = classifiedRows.filter(isImportableRow);
 
-  const validRows = input.rows.filter(isValidImportRow);
-
-  if (validRows.length === 0) {
-    return {
-      ok: false,
-      error: 'No valid rows to import. Fix validation errors and try again.',
-    };
-  }
-
-  const skippedCount = input.rows.length - validRows.length;
+  const skippedCount = input.rows.length - importableRows.length;
   const status: ImportStatus =
     skippedCount === 0 ? 'completed' : 'partial';
 
@@ -75,22 +68,24 @@ export async function confirmImport(
     await db.insert(imports).values({
       id: importId,
       filename,
-      rowCount: validRows.length,
+      rowCount: importableRows.length,
       userId: session.user.id,
       status,
       merchant,
     });
 
-    await db.insert(transactions).values(
-      validRows.map((row) => ({
-        date: new Date(row.date!),
-        description: row.description.trim(),
-        category: null,
-        value: formatTransactionValue(row.value!),
-        importId,
-        merchant,
-      })),
-    );
+    if (importableRows.length > 0) {
+      await db.insert(transactions).values(
+        importableRows.map(({ row }) => ({
+          date: new Date(row.date!),
+          description: row.description.trim(),
+          category: null,
+          value: formatTransactionValueForKey(row.value!),
+          importId,
+          merchant,
+        })),
+      );
+    }
   } catch (error) {
     try {
       await db.delete(imports).where(eq(imports.id, importId));
@@ -110,7 +105,7 @@ export async function confirmImport(
     ok: true,
     importId,
     status,
-    importedCount: validRows.length,
+    importedCount: importableRows.length,
     skippedCount,
   };
 }

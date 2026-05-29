@@ -1,4 +1,17 @@
 export {
+  buildDuplicateKey,
+  formatTransactionValueForKey,
+} from './duplicate-key';
+export {
+  classifyImportRows,
+  detectDuplicateStatuses,
+  getDuplicateTooltipMessage,
+  isImportableRow,
+  type ClassifiedImportRow,
+  type DuplicateReason,
+  type RowDuplicateStatus,
+} from './detect-duplicates';
+export {
   getSpreadsheetFileTypeFromMime,
   getSpreadsheetFileTypeFromName,
   isSupportedSpreadsheetFile,

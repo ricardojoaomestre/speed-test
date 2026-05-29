@@ -1,15 +1,23 @@
 "use server";
 
 import {
+  detectDuplicateStatuses,
   parseLocalizedNumber,
   parseSpreadsheetToJson,
   type ImportedSpreadsheetRow,
+  type RowDuplicateStatus,
   type SpreadsheetRow,
   validateSpreadsheetFile,
 } from "@/lib/file-import";
+import { getExistingDuplicateKeys } from "@/lib/file-import/get-existing-duplicate-keys";
+import { isMerchantSlug } from "@/lib/merchants";
+
+export type ParsedImportRow = ImportedSpreadsheetRow & {
+  duplicate: RowDuplicateStatus;
+};
 
 export type ImportSpreadsheetResult =
-  | { ok: true; data: ImportedSpreadsheetRow[] }
+  | { ok: true; data: ParsedImportRow[] }
   | { ok: false; error: string };
 
 const normalizeHeader = (header: string) =>
@@ -64,10 +72,17 @@ export async function importSpreadsheetFile(
   formData: FormData,
 ): Promise<ImportSpreadsheetResult> {
   const file = formData.get("file");
+  const merchantValue = formData.get("merchant");
 
   if (!(file instanceof File)) {
     return { ok: false as const, error: "No file provided." };
   }
+
+  if (typeof merchantValue !== "string" || !isMerchantSlug(merchantValue)) {
+    return { ok: false as const, error: "A valid merchant is required." };
+  }
+
+  const merchant = merchantValue;
 
   const validation = validateSpreadsheetFile(file);
 
@@ -130,5 +145,13 @@ export async function importSpreadsheetFile(
         (row.balance ?? null) !== null,
     );
 
-  return { ok: true as const, data };
+  const existingKeys = await getExistingDuplicateKeys(merchant);
+  const duplicateStatuses = detectDuplicateStatuses(data, existingKeys, merchant);
+
+  const rowsWithDuplicates: ParsedImportRow[] = data.map((row, index) => ({
+    ...row,
+    duplicate: duplicateStatuses[index]!,
+  }));
+
+  return { ok: true as const, data: rowsWithDuplicates };
 }

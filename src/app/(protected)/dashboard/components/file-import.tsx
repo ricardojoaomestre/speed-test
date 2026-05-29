@@ -4,7 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { confirmImport } from '@/app/(protected)/dashboard/actions/confirm-import';
-import { importSpreadsheetFile } from '@/app/(protected)/dashboard/actions/import-file';
+import {
+  importSpreadsheetFile,
+  type ParsedImportRow,
+} from '@/app/(protected)/dashboard/actions/import-file';
 import {
   getPreviewColumns,
   type PreviewRow,
@@ -23,10 +26,7 @@ import {
 } from '@/components/ui/select';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useSpreadsheetFile } from '@/hooks/use-spreadsheet-file';
-import {
-  type ImportedSpreadsheetRow,
-  validateImportRow,
-} from '@/lib/file-import';
+import { validateImportRow } from '@/lib/file-import';
 import {
   isMerchantSlug,
   MERCHANTS_SORTED_BY_LABEL,
@@ -41,9 +41,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const { validation, validate, clear } = useSpreadsheetFile();
-  const [parsedData, setParsedData] = useState<ImportedSpreadsheetRow[] | null>(
-    null,
-  );
+  const [parsedData, setParsedData] = useState<ParsedImportRow[] | null>(null);
   const [filename, setFilename] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [merchant, setMerchant] = useState<MerchantSlug | undefined>();
@@ -63,32 +61,89 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
     return getPreviewColumns(includeBalance ?? false);
   }, [parsedData]);
 
-  const validCount = previewRows?.filter((row) => row.validation.valid).length ?? 0;
+  const importableCount =
+    previewRows?.filter(
+      (row) => row.validation.valid && !row.duplicate.isDuplicate,
+    ).length ?? 0;
+
+  const duplicateCount =
+    previewRows?.filter(
+      (row) => row.validation.valid && row.duplicate.isDuplicate,
+    ).length ?? 0;
+
+  const invalidCount =
+    previewRows?.filter((row) => !row.validation.valid).length ?? 0;
 
   useEffect(() => {
     onPreviewChange?.(!!previewRows && !!filename);
   }, [previewRows, filename, onPreviewChange]);
 
-  const resetPreview = () => {
+  const clearPreview = () => {
     setParsedData(null);
     setFilename(null);
-    setMerchant(undefined);
     setError(null);
     formRef.current?.reset();
     clear();
   };
 
+  const resetPreview = () => {
+    clearPreview();
+    setMerchant(undefined);
+  };
+
+  const handleMerchantChange = (value: string) => {
+    if (!isMerchantSlug(value)) return;
+
+    setMerchant(value);
+
+    if (parsedData) {
+      clearPreview();
+    }
+  };
+
+  const summaryParts = previewRows
+    ? [
+        `${previewRows.length} row${previewRows.length === 1 ? '' : 's'} parsed`,
+        `${importableCount} importable`,
+        duplicateCount > 0
+          ? `${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`
+          : null,
+        invalidCount > 0
+          ? `${invalidCount} invalid`
+          : null,
+      ].filter(Boolean)
+    : [];
+
   return (
     <TooltipProvider>
       <div className="flex w-full max-w-4xl flex-col gap-6">
+        <Field>
+          <FieldLabel htmlFor="merchant">Merchant</FieldLabel>
+          <Select value={merchant} onValueChange={handleMerchantChange}>
+            <SelectTrigger id="merchant" className="w-full max-w-md">
+              <SelectValue placeholder="Select merchant" />
+            </SelectTrigger>
+            <SelectContent>
+              {MERCHANTS_SORTED_BY_LABEL.map(({ slug, label }) => (
+                <SelectItem key={slug} value={slug}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
         <form
           ref={formRef}
           action={(formData) => {
+            if (!merchant) return;
+
             startParseTransition(async () => {
               setError(null);
               setParsedData(null);
               setFilename(null);
-              setMerchant(undefined);
+
+              formData.set('merchant', merchant);
 
               const file = formData.get('file');
               const parsedFilename =
@@ -115,6 +170,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
               id="file"
               name="file"
               accept=".csv,.xlsx,.xls"
+              disabled={!merchant}
               onChange={(e) => validate(e.target.files?.[0] ?? null)}
             />
             {validation?.ok === false && (
@@ -123,7 +179,12 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
           </Field>
           <Button
             type="submit"
-            disabled={validation?.ok !== true || isParsing || !!previewRows}
+            disabled={
+              !merchant ||
+              validation?.ok !== true ||
+              isParsing ||
+              !!previewRows
+            }
             className="mt-4"
           >
             {isParsing ? 'Parsing…' : 'Parse file'}
@@ -137,40 +198,15 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
           </Alert>
         )}
 
-        {previewRows && filename && (
+        {previewRows && filename && merchant && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium">{filename}</p>
               <p className="text-sm text-muted-foreground">
-                {previewRows.length} row{previewRows.length === 1 ? '' : 's'}{' '}
-                parsed · {validCount} valid
-                {validCount < previewRows.length &&
-                  ` · ${previewRows.length - validCount} will be skipped`}
+                {summaryParts.join(' · ')}
               </p>
             </div>
             <ImportDataTable columns={columns} data={previewRows} />
-            <Field>
-              <FieldLabel htmlFor="merchant">Merchant</FieldLabel>
-              <Select
-                value={merchant}
-                onValueChange={(value) => {
-                  if (isMerchantSlug(value)) {
-                    setMerchant(value);
-                  }
-                }}
-              >
-                <SelectTrigger id="merchant" className="w-full max-w-md">
-                  <SelectValue placeholder="Select merchant" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MERCHANTS_SORTED_BY_LABEL.map(({ slug, label }) => (
-                    <SelectItem key={slug} value={slug}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -182,19 +218,24 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
               </Button>
               <Button
                 type="button"
-                disabled={isConfirming || validCount === 0 || !merchant}
+                disabled={isConfirming}
                 onClick={() => {
                   startConfirmTransition(async () => {
                     setError(null);
 
                     const result = await confirmImport({
                       filename,
-                      merchant: merchant!,
+                      merchant,
                       rows: parsedData!,
                     });
 
                     if (!result.ok) {
                       setError(result.error);
+                      return;
+                    }
+
+                    if (result.importedCount === 0) {
+                      router.push(`/imports/${result.importId}`);
                       return;
                     }
 

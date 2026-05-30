@@ -1,127 +1,319 @@
 'use client';
 
-import { PencilIcon } from 'lucide-react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVerticalIcon, PencilIcon } from 'lucide-react';
+import { useState, useSyncExternalStore, type CSSProperties, type Ref } from 'react';
 
-import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { Switch } from '@/components/ui/switch';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { CategoryRow } from '@/lib/categories/get-categories';
-import type { ColumnDef } from '@tanstack/react-table';
+
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 type CategoriesTableProps = {
   categories: CategoryRow[];
   disabled?: boolean;
   onEdit: (category: CategoryRow) => void;
+  onReorder: (orderedIds: string[]) => Promise<{ ok: true } | { ok: false; error: string }>;
   onToggleActive: (id: string, active: boolean) => void;
 };
 
-export function CategoriesTable({
-  categories,
-  disabled = false,
+type CategoryTableRowProps = {
+  category: CategoryRow;
+  index: number;
+  disabled: boolean;
+  dragDisabled?: boolean;
+  onEdit: (category: CategoryRow) => void;
+  onToggleActive: (id: string, active: boolean) => void;
+  rowRef?: Ref<HTMLTableRowElement>;
+  rowStyle?: CSSProperties;
+  dragHandleProps?: React.ComponentProps<'button'>;
+};
+
+function CategoryTableRow({
+  category,
+  index,
+  disabled,
+  dragDisabled = false,
   onEdit,
   onToggleActive,
-}: CategoriesTableProps) {
-  const columns: ColumnDef<CategoryRow>[] = [
-    {
-      accessorKey: 'priority',
-      header: '#',
-      meta: {
-        headerClassName: 'w-12',
-        cellClassName: 'w-12',
-      },
-      cell: ({ row }) => (
-        <span className="tabular-nums text-muted-foreground">
-          {row.index + 1}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      meta: {
-        headerClassName: 'w-[20%]',
-        cellClassName: 'w-[20%]',
-      },
-      cell: ({ row }) => (
-        <span className="block truncate font-medium">{row.original.name}</span>
-      ),
-    },
-    {
-      accessorKey: 'pattern',
-      header: 'Pattern',
-      meta: {
-        headerClassName: 'max-w-xs',
-        cellClassName: 'max-w-xs overflow-hidden',
-      },
-      cell: ({ row }) => (
+  rowRef,
+  rowStyle,
+  dragHandleProps,
+}: CategoryTableRowProps) {
+  return (
+    <TableRow ref={rowRef} style={rowStyle}>
+      <TableCell className="w-10">
+        <button
+          type="button"
+          className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={dragDisabled}
+          aria-label={`Reorder ${category.name}`}
+          {...dragHandleProps}
+        >
+          <GripVerticalIcon className="size-4" />
+        </button>
+      </TableCell>
+      <TableCell className="w-12">
+        <span className="tabular-nums text-muted-foreground">{index + 1}</span>
+      </TableCell>
+      <TableCell className="w-[20%]">
+        <span className="block truncate font-medium">{category.name}</span>
+      </TableCell>
+      <TableCell className="max-w-xs overflow-hidden">
         <code
           className="block truncate text-xs text-muted-foreground"
-          title={row.original.pattern}
+          title={category.pattern}
         >
-          {row.original.pattern}
+          {category.pattern}
         </code>
-      ),
-    },
-    {
-      accessorKey: 'active',
-      header: 'Status',
-      meta: {
-        headerClassName: 'w-28',
-        cellClassName: 'w-28',
-      },
-      cell: ({ row }) =>
-        row.original.active ? (
+      </TableCell>
+      <TableCell className="w-28">
+        {category.active ? (
           <Badge variant="success">Active</Badge>
         ) : (
           <Badge variant="secondary">Inactive</Badge>
-        ),
-    },
-    {
-      id: 'toggle',
-      header: 'Active',
-      meta: {
-        headerClassName: 'w-20',
-        cellClassName: 'w-20',
-      },
-      cell: ({ row }) => (
+        )}
+      </TableCell>
+      <TableCell className="w-20">
         <Switch
-          checked={row.original.active}
+          checked={category.active}
           disabled={disabled}
-          aria-label={`Toggle ${row.original.name}`}
-          onCheckedChange={(checked) =>
-            onToggleActive(row.original.id, checked)
-          }
+          aria-label={`Toggle ${category.name}`}
+          onCheckedChange={(checked) => onToggleActive(category.id, checked)}
         />
-      ),
-    },
-    {
-      id: 'actions',
-      header: () => <span className="sr-only">Actions</span>,
-      meta: {
-        headerClassName: 'w-24',
-        cellClassName: 'w-24',
-      },
-      cell: ({ row }) => (
+      </TableCell>
+      <TableCell className="w-24">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           disabled={disabled}
-          onClick={() => onEdit(row.original)}
+          onClick={() => onEdit(category)}
         >
           <PencilIcon />
           Edit
         </Button>
-      ),
-    },
-  ];
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SortableCategoryRow(props: Omit<CategoryTableRowProps, 'rowRef' | 'rowStyle' | 'dragHandleProps'>) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.category.id, disabled: props.disabled });
 
   return (
-    <ImportDataTable
-      columns={columns}
-      data={categories}
-      tableClassName="table-fixed"
+    <CategoryTableRow
+      {...props}
+      dragDisabled={props.disabled}
+      rowRef={setNodeRef}
+      rowStyle={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      dragHandleProps={{ ...attributes, ...listeners }}
     />
+  );
+}
+
+function CategoriesTableBody({
+  items,
+  disabled,
+  sortable,
+  onEdit,
+  onToggleActive,
+}: {
+  items: CategoryRow[];
+  disabled: boolean;
+  sortable: boolean;
+  onEdit: (category: CategoryRow) => void;
+  onToggleActive: (id: string, active: boolean) => void;
+}) {
+  if (!items.length) {
+    return (
+      <TableBody>
+        <TableRow>
+          <TableCell colSpan={7} className="p-0">
+            <Empty className="border-0 py-12">
+              <EmptyHeader>
+                <EmptyTitle>No results</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    );
+  }
+
+  return (
+    <TableBody>
+      {items.map((category, index) =>
+        sortable ? (
+          <SortableCategoryRow
+            key={category.id}
+            category={category}
+            index={index}
+            disabled={disabled}
+            onEdit={onEdit}
+            onToggleActive={onToggleActive}
+          />
+        ) : (
+          <CategoryTableRow
+            key={category.id}
+            category={category}
+            index={index}
+            disabled={disabled}
+            dragDisabled
+            onEdit={onEdit}
+            onToggleActive={onToggleActive}
+          />
+        ),
+      )}
+    </TableBody>
+  );
+}
+
+export function CategoriesTable({
+  categories,
+  disabled = false,
+  onEdit,
+  onReorder,
+  onToggleActive,
+}: CategoriesTableProps) {
+  const [items, setItems] = useState(categories);
+  const [isReordering, setIsReordering] = useState(false);
+  const sortable = useIsClient();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = items.findIndex((item) => item.id === active.id);
+    const newIndex = items.findIndex((item) => item.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    const nextItems = arrayMove(items, oldIndex, newIndex);
+    const previousItems = items;
+
+    setItems(nextItems);
+    setIsReordering(true);
+
+    const result = await onReorder(nextItems.map((item) => item.id));
+
+    setIsReordering(false);
+
+    if (!result.ok) {
+      setItems(previousItems);
+    }
+  }
+
+  const rowProps = {
+    items,
+    disabled: disabled || isReordering,
+    onEdit,
+    onToggleActive,
+  };
+
+  const table = (
+    <div className="overflow-hidden rounded-md border">
+      <Table className="table-fixed">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">
+              <span className="sr-only">Reorder</span>
+            </TableHead>
+            <TableHead className="w-12">#</TableHead>
+            <TableHead className="w-[20%]">Name</TableHead>
+            <TableHead className="max-w-xs">Pattern</TableHead>
+            <TableHead className="w-28">Status</TableHead>
+            <TableHead className="w-20">Active</TableHead>
+            <TableHead className="w-24">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        {sortable ? (
+          <SortableContext
+            items={items.map((item) => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <CategoriesTableBody {...rowProps} sortable />
+          </SortableContext>
+        ) : (
+          <CategoriesTableBody {...rowProps} sortable={false} />
+        )}
+      </Table>
+    </div>
+  );
+
+  if (!sortable) {
+    return table;
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      {table}
+    </DndContext>
   );
 }

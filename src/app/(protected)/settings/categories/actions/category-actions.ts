@@ -219,3 +219,63 @@ export async function setCategoryActive(
   revalidatePath('/settings/categories');
   return { ok: true };
 }
+
+export async function reorderCategories(
+  orderedIds: string[],
+): Promise<ActionResult> {
+  const userId = await requireSessionUserId();
+
+  if (!userId) {
+    return { ok: false, error: 'You must be signed in.' };
+  }
+
+  if (orderedIds.length === 0) {
+    return { ok: true };
+  }
+
+  const uniqueIds = new Set(orderedIds);
+
+  if (uniqueIds.size !== orderedIds.length) {
+    return { ok: false, error: 'Invalid category order.' };
+  }
+
+  try {
+    const existing = await db
+      .select({ id: categories.id })
+      .from(categories);
+
+    if (existing.length !== orderedIds.length) {
+      return {
+        ok: false,
+        error: 'Category list is out of date. Refresh and try again.',
+      };
+    }
+
+    const existingIds = new Set(existing.map((row) => row.id));
+
+    if (!orderedIds.every((id) => existingIds.has(id))) {
+      return { ok: false, error: 'Invalid category order.' };
+    }
+
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+      for (const [index, id] of orderedIds.entries()) {
+        await tx
+          .update(categories)
+          .set({ priority: index + 1, updatedAt: now })
+          .where(eq(categories.id, id));
+      }
+    });
+  } catch (error) {
+    console.error('[reorderCategories]', error);
+
+    return {
+      ok: false,
+      error: formatDbError(error, 'Could not update category order'),
+    };
+  }
+
+  revalidatePath('/settings/categories');
+  return { ok: true };
+}

@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 
 import {
   createCategory,
+  reorderCategories,
   setCategoryActive,
   updateCategory,
   type CategoryFormInput,
@@ -26,6 +27,7 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
   const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(
     null,
   );
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [toggleError, setToggleError] = useState<string | null>(null);
 
   function openCreate() {
@@ -62,6 +64,23 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
     return result;
   }
 
+  async function handleReorder(orderedIds: string[]) {
+    setOrderError(null);
+
+    const result = await reorderCategories(orderedIds);
+
+    if (!result.ok) {
+      setOrderError(result.error);
+      return result;
+    }
+
+    startTransition(() => {
+      router.refresh();
+    });
+
+    return result;
+  }
+
   async function handleToggleActive(id: string, active: boolean) {
     setToggleError(null);
 
@@ -90,6 +109,12 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
         <Button onClick={openCreate}>New category</Button>
       </div>
 
+      {orderError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {orderError}
+        </p>
+      ) : null}
+
       {toggleError ? (
         <p className="text-sm text-destructive" role="alert">
           {toggleError}
@@ -97,9 +122,11 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
       ) : null}
 
       <CategoriesTable
+        key={categories.map((category) => `${category.id}:${category.priority}`).join('|')}
         categories={categories}
         disabled={isPending}
         onEdit={openEdit}
+        onReorder={handleReorder}
         onToggleActive={handleToggleActive}
       />
 

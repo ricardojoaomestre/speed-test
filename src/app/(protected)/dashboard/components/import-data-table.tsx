@@ -24,11 +24,13 @@ import {
 interface ImportDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  tableClassName?: string;
 }
 
 export function ImportDataTable<TData, TValue>({
   columns,
   data,
+  tableClassName,
 }: ImportDataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -38,12 +40,15 @@ export function ImportDataTable<TData, TValue>({
 
   return (
     <div className="overflow-hidden rounded-md border">
-      <Table>
+      <Table className={tableClassName}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
+                <TableHead
+                  key={header.id}
+                  className={header.column.columnDef.meta?.headerClassName}
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
@@ -60,7 +65,10 @@ export function ImportDataTable<TData, TValue>({
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    key={cell.id}
+                    className={cell.column.columnDef.meta?.cellClassName}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -81,4 +89,12 @@ export function ImportDataTable<TData, TValue>({
       </Table>
     </div>
   );
+}
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData, TValue> {
+    headerClassName?: string;
+    cellClassName?: string;
+  }
 }

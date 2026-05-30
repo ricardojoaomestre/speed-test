@@ -6,6 +6,8 @@ import { auth } from '@/auth';
 import { db } from '@/db';
 import { imports, type ImportStatus, transactions } from '@/db/schema';
 import { formatDbError } from '@/lib/db/format-db-error';
+import { getActiveCategoriesForImport } from '@/lib/categories/get-active-categories-for-import';
+import { matchCategoryId } from '@/lib/categories/match-category';
 import {
   classifyImportRows,
   formatTransactionValueForKey,
@@ -63,6 +65,7 @@ export async function confirmImport(
     skippedCount === 0 ? 'completed' : 'partial';
 
   const importId = crypto.randomUUID();
+  const categoryRules = await getActiveCategoriesForImport();
 
   try {
     await db.insert(imports).values({
@@ -76,14 +79,18 @@ export async function confirmImport(
 
     if (importableRows.length > 0) {
       await db.insert(transactions).values(
-        importableRows.map(({ row }) => ({
-          date: new Date(row.date!),
-          description: row.description.trim(),
-          category: null,
-          value: formatTransactionValueForKey(row.value!),
-          importId,
-          merchant,
-        })),
+        importableRows.map(({ row }) => {
+          const description = row.description.trim();
+
+          return {
+            date: new Date(row.date!),
+            description,
+            categoryId: matchCategoryId(description, categoryRules),
+            value: formatTransactionValueForKey(row.value!),
+            importId,
+            merchant,
+          };
+        }),
       );
     }
   } catch (error) {

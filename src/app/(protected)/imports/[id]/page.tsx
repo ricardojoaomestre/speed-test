@@ -10,7 +10,7 @@ import {
   EmptyHeader,
 } from '@/components/ui/empty';
 import { db } from '@/db';
-import { imports, transactions, users } from '@/db/schema';
+import { categories, imports, transactions, users } from '@/db/schema';
 import { formatDisplayDate, formatImportStatus } from '@/lib/formatters';
 import { getMerchantLabelOrSlug } from '@/lib/merchants';
 import { importStatusBadgeVariant } from '@/lib/status-badge';
@@ -47,10 +47,11 @@ export default async function ImportDetailPage({ params }: ImportDetailPageProps
       id: transactions.id,
       date: transactions.date,
       description: transactions.description,
-      category: transactions.category,
+      categoryName: categories.name,
       value: transactions.value,
     })
     .from(transactions)
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(eq(transactions.importId, id))
     .orderBy(desc(transactions.date));
 

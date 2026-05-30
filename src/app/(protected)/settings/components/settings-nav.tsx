@@ -5,18 +5,13 @@ import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
-const links = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/imports', label: 'Import jobs' },
-  { href: '/transactions', label: 'Transactions' },
-  { href: '/settings', label: 'Settings' },
-] as const;
+const links = [{ href: '/settings/categories', label: 'Categories' }] as const;
 
-export function ProtectedNav() {
+export function SettingsNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-4">
+    <nav className="flex flex-col gap-1">
       {links.map((link) => {
         const isActive =
           pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -26,10 +21,10 @@ export function ProtectedNav() {
             key={link.href}
             href={link.href}
             className={cn(
-              'text-sm font-medium transition-colors',
+              'rounded-md px-3 py-2 text-sm font-medium transition-colors',
               isActive
-                ? 'text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
             )}
           >
             {link.label}

@@ -89,6 +89,22 @@ export const authenticators = pgTable(
 export const importStatusEnum = ['completed', 'partial', 'failed'] as const;
 export type ImportStatus = (typeof importStatusEnum)[number];
 
+export const categories = pgTable('category', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull().unique(),
+  pattern: text('pattern').notNull(),
+  priority: integer('priority').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('createdAt', { mode: 'date' })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' })
+    .notNull()
+    .defaultNow(),
+});
+
 export const imports = pgTable('import', {
   id: text('id')
     .primaryKey()
@@ -114,7 +130,9 @@ export const transactions = pgTable('transaction', {
     .references(() => imports.id, { onDelete: 'cascade' }),
   date: timestamp('date', { mode: 'date' }).notNull(),
   description: text('description').notNull(),
-  category: text('category'),
+  categoryId: text('categoryId').references(() => categories.id, {
+    onDelete: 'restrict',
+  }),
   value: numeric('value', { precision: 14, scale: 2 }).notNull(),
   merchant: text('merchant').notNull(),
 });
@@ -127,9 +145,17 @@ export const importsRelations = relations(imports, ({ one, many }) => ({
   transactions: many(transactions),
 }));
 
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  transactions: many(transactions),
+}));
+
 export const transactionsRelations = relations(transactions, ({ one }) => ({
   import: one(imports, {
     fields: [transactions.importId],
     references: [imports.id],
+  }),
+  category: one(categories, {
+    fields: [transactions.categoryId],
+    references: [categories.id],
   }),
 }));

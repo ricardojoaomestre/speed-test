@@ -9,7 +9,7 @@ export type ImportTransactionRow = {
   id: string;
   date: Date;
   description: string;
-  category: string | null;
+  categoryName: string | null;
   value: string;
 };
 
@@ -27,9 +27,9 @@ const columns: ColumnDef<ImportTransactionRow>[] = [
     ),
   },
   {
-    accessorKey: 'category',
+    accessorKey: 'categoryName',
     header: 'Category',
-    cell: ({ row }) => row.original.category ?? '—',
+    cell: ({ row }) => row.original.categoryName ?? '—',
   },
   {
     accessorKey: 'value',

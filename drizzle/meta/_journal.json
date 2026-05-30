@@ -22,6 +22,13 @@
       "when": 1780084547858,
       "tag": "0002_stiff_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780090000000,
+      "tag": "0003_categories",
+      "breakpoints": true
     }
   ]
 }

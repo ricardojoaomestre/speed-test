@@ -24,4 +24,5 @@ export type ImportedSpreadsheetRow = {
   description: string;
   value: number | null;
   balance?: number | null;
+  categoryId: string | null;
 };

@@ -1,6 +1,6 @@
 'use server';
 
-import { eq, max } from 'drizzle-orm';
+import { eq, inArray, max, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 import { auth } from '@/auth';
@@ -258,15 +258,17 @@ export async function reorderCategories(
     }
 
     const now = new Date();
+    const whenClauses = orderedIds.map((id, index) =>
+      sql`when ${id} then ${index + 1}`,
+    );
 
-    await db.transaction(async (tx) => {
-      for (const [index, id] of orderedIds.entries()) {
-        await tx
-          .update(categories)
-          .set({ priority: index + 1, updatedAt: now })
-          .where(eq(categories.id, id));
-      }
-    });
+    await db
+      .update(categories)
+      .set({
+        priority: sql`(case ${categories.id} ${sql.join(whenClauses, sql` `)} end)::integer`,
+        updatedAt: now,
+      })
+      .where(inArray(categories.id, orderedIds));
   } catch (error) {
     console.error('[reorderCategories]', error);
 

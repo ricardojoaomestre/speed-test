@@ -9,6 +9,11 @@ import {
   type SpreadsheetRow,
   validateSpreadsheetFile,
 } from "@/lib/file-import";
+import {
+  getActiveCategoriesForImport,
+  type ImportCategoryOption,
+} from "@/lib/categories/get-active-categories-for-import";
+import { matchCategoryId } from "@/lib/categories/match-category";
 import { getExistingDuplicateKeys } from "@/lib/file-import/get-existing-duplicate-keys";
 import { isMerchantSlug } from "@/lib/merchants";
 
@@ -17,7 +22,7 @@ export type ParsedImportRow = ImportedSpreadsheetRow & {
 };
 
 export type ImportSpreadsheetResult =
-  | { ok: true; data: ParsedImportRow[] }
+  | { ok: true; data: ParsedImportRow[]; categories: ImportCategoryOption[] }
   | { ok: false; error: string };
 
 const normalizeHeader = (header: string) =>
@@ -129,6 +134,7 @@ export async function importSpreadsheetFile(
         date: toIsoDateString(row[dateColumn]),
         description: toNullableString(row[descriptionColumn]) ?? "",
         value: toNullableNumber(row[valueColumn]),
+        categoryId: null,
       };
 
       if (balanceColumn) {
@@ -150,8 +156,38 @@ export async function importSpreadsheetFile(
 
   const rowsWithDuplicates: ParsedImportRow[] = data.map((row, index) => ({
     ...row,
+    description: row.description.trim(),
     duplicate: duplicateStatuses[index]!,
   }));
 
-  return { ok: true as const, data: rowsWithDuplicates };
+  const matched = await matchImportRowsToCategories(rowsWithDuplicates);
+
+  return { ok: true as const, ...matched };
+}
+
+export type RematchImportCategoriesResult = {
+  data: ParsedImportRow[];
+  categories: ImportCategoryOption[];
+};
+
+export async function rematchImportCategories(
+  rows: ParsedImportRow[],
+): Promise<RematchImportCategoriesResult> {
+  return matchImportRowsToCategories(rows);
+}
+
+async function matchImportRowsToCategories(
+  rows: ParsedImportRow[],
+): Promise<RematchImportCategoriesResult> {
+  const categoryRules = await getActiveCategoriesForImport();
+  const categories: ImportCategoryOption[] = categoryRules.map(
+    ({ id, name }) => ({ id, name }),
+  );
+
+  const data = rows.map((row) => ({
+    ...row,
+    categoryId: matchCategoryId(row.description.trim(), categoryRules),
+  }));
+
+  return { data, categories };
 }

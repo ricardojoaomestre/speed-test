@@ -29,6 +29,7 @@ type CategoryFormSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   category: CategoryRow | null;
+  defaultPattern?: string;
   onSubmit: (input: CategoryFormInput) => Promise<{
     ok: boolean;
     error?: string;
@@ -38,18 +39,22 @@ type CategoryFormSheetProps = {
 
 type CategoryFormBodyProps = {
   category: CategoryRow | null;
+  defaultPattern?: string;
   onSubmit: CategoryFormSheetProps['onSubmit'];
   onCancel: () => void;
 };
 
 function CategoryFormBody({
   category,
+  defaultPattern,
   onSubmit,
   onCancel,
 }: CategoryFormBodyProps) {
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(category?.name ?? '');
-  const [pattern, setPattern] = useState(category?.pattern ?? '');
+  const [pattern, setPattern] = useState(
+    category?.pattern ?? defaultPattern ?? '',
+  );
   const [active, setActive] = useState(category?.active ?? true);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<
@@ -156,10 +161,11 @@ export function CategoryFormSheet({
   open,
   onOpenChange,
   category,
+  defaultPattern,
   onSubmit,
 }: CategoryFormSheetProps) {
   const isEditing = category !== null;
-  const formKey = category?.id ?? 'new';
+  const formKey = category?.id ?? `new-${defaultPattern ?? ''}`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -177,6 +183,7 @@ export function CategoryFormSheet({
           <CategoryFormBody
             key={formKey}
             category={category}
+            defaultPattern={defaultPattern}
             onSubmit={onSubmit}
             onCancel={() => onOpenChange(false)}
           />

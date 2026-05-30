@@ -5,9 +5,8 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { db } from '@/db';
 import { imports, type ImportStatus, transactions } from '@/db/schema';
-import { formatDbError } from '@/lib/db/format-db-error';
 import { getActiveCategoriesForImport } from '@/lib/categories/get-active-categories-for-import';
-import { matchCategoryId } from '@/lib/categories/match-category';
+import { formatDbError } from '@/lib/db/format-db-error';
 import {
   classifyImportRows,
   formatTransactionValueForKey,
@@ -65,7 +64,18 @@ export async function confirmImport(
     skippedCount === 0 ? 'completed' : 'partial';
 
   const importId = crypto.randomUUID();
-  const categoryRules = await getActiveCategoriesForImport();
+  const activeCategories = await getActiveCategoriesForImport();
+  const activeCategoryIds = new Set(activeCategories.map((category) => category.id));
+
+  for (const { row } of importableRows) {
+    if (row.categoryId !== null && !activeCategoryIds.has(row.categoryId)) {
+      return {
+        ok: false,
+        error:
+          'One or more selected categories are no longer available. Review categories and try again.',
+      };
+    }
+  }
 
   try {
     await db.insert(imports).values({
@@ -85,7 +95,7 @@ export async function confirmImport(
           return {
             date: new Date(row.date!),
             description,
-            categoryId: matchCategoryId(description, categoryRules),
+            categoryId: row.categoryId,
             value: formatTransactionValueForKey(row.value!),
             importId,
             merchant,

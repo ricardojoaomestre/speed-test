@@ -1,15 +1,23 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { confirmImport } from '@/app/(protected)/dashboard/actions/confirm-import';
-import { importSpreadsheetFile } from '@/app/(protected)/dashboard/actions/import-file';
+import {
+  importSpreadsheetFile,
+  rematchImportCategories,
+} from '@/app/(protected)/dashboard/actions/import-file';
 import {
   getPreviewColumns,
   type PreviewRow,
 } from '@/app/(protected)/dashboard/components/import-columns';
 import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
+import {
+  createCategory,
+  type CategoryFormInput,
+} from '@/app/(protected)/settings/categories/actions/category-actions';
+import { CategoryFormSheet } from '@/app/(protected)/settings/categories/components/category-form-sheet';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
@@ -24,6 +32,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useImportPreviewState } from '@/hooks/use-import-preview-state';
 import { useSpreadsheetFile } from '@/hooks/use-spreadsheet-file';
+import { escapeRegexLiteral } from '@/lib/categories/escape-regex-literal';
 import { validateImportRow } from '@/lib/file-import';
 import {
   isMerchantSlug,
@@ -39,9 +48,14 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
   const formRef = useRef<HTMLFormElement>(null);
   const { validation, validate, clear } = useSpreadsheetFile();
   const [state, dispatch] = useImportPreviewState();
-  const { parsedData, filename, error, merchant } = state;
+  const { parsedData, categories, filename, error, merchant } = state;
   const [isParsing, startParseTransition] = useTransition();
   const [isConfirming, startConfirmTransition] = useTransition();
+  const [isRematching, startRematchTransition] = useTransition();
+  const [createCategoryOpen, setCreateCategoryOpen] = useState(false);
+  const [createCategoryPattern, setCreateCategoryPattern] = useState<
+    string | null
+  >(null);
 
   const previewRows: PreviewRow[] | null = useMemo(() => {
     if (!parsedData) return null;
@@ -51,10 +65,65 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
     }));
   }, [parsedData]);
 
+  const handleCategoryChange = useCallback(
+    (rowIndex: number, categoryId: string | null) => {
+      dispatch({ type: 'set-row-category', rowIndex, categoryId });
+    },
+    [dispatch],
+  );
+
+  const handleOpenCreateCategory = useCallback((description: string) => {
+    setCreateCategoryPattern(escapeRegexLiteral(description.trim()));
+    setCreateCategoryOpen(true);
+  }, []);
+
+  const handleCreateCategorySheetOpenChange = useCallback((open: boolean) => {
+    setCreateCategoryOpen(open);
+
+    if (!open) {
+      setCreateCategoryPattern(null);
+    }
+  }, []);
+
+  const handleCreateCategory = useCallback(
+    async (input: CategoryFormInput) => {
+      const result = await createCategory(input);
+
+      if (result.ok && parsedData) {
+        setCreateCategoryOpen(false);
+        setCreateCategoryPattern(null);
+
+        startRematchTransition(async () => {
+          const rematched = await rematchImportCategories(parsedData);
+
+          dispatch({
+            type: 'categories-rematched',
+            data: rematched.data,
+            categories: rematched.categories,
+          });
+        });
+      }
+
+      return result;
+    },
+    [dispatch, parsedData],
+  );
+
   const columns = useMemo(() => {
+    if (!categories) return [];
     const includeBalance = parsedData?.some((row) => row.balance !== undefined);
-    return getPreviewColumns(includeBalance ?? false);
-  }, [parsedData]);
+    return getPreviewColumns(
+      includeBalance ?? false,
+      categories,
+      handleCategoryChange,
+      handleOpenCreateCategory,
+    );
+  }, [
+    parsedData,
+    categories,
+    handleCategoryChange,
+    handleOpenCreateCategory,
+  ]);
 
   const importableCount =
     previewRows?.filter(
@@ -138,6 +207,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
               dispatch({
                 type: 'parse-succeeded',
                 data: result.data,
+                categories: result.categories,
                 filename: parsedFilename,
               });
               formRef.current?.reset();
@@ -180,7 +250,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
           </Alert>
         )}
 
-        {previewRows && filename && merchant && (
+        {previewRows && filename && merchant && categories && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium">{filename}</p>
@@ -188,7 +258,11 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
                 {summaryParts.join(' · ')}
               </p>
             </div>
-            <ImportDataTable columns={columns} data={previewRows} />
+            <ImportDataTable
+              columns={columns}
+              data={previewRows}
+              tableClassName={isRematching ? 'opacity-60' : undefined}
+            />
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -203,7 +277,7 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
               </Button>
               <Button
                 type="button"
-                disabled={isConfirming}
+                disabled={isConfirming || isRematching}
                 onClick={() => {
                   startConfirmTransition(async () => {
                     const result = await confirmImport({
@@ -231,6 +305,14 @@ const FileImport = ({ onPreviewChange }: FileImportProps) => {
             </div>
           </div>
         )}
+
+        <CategoryFormSheet
+          open={createCategoryOpen}
+          onOpenChange={handleCreateCategorySheetOpenChange}
+          category={null}
+          defaultPattern={createCategoryPattern ?? undefined}
+          onSubmit={handleCreateCategory}
+        />
       </div>
     </TooltipProvider>
   );

@@ -9,10 +9,11 @@ import {
   updateCategory,
   type CategoryFormInput,
 } from '@/app/(protected)/settings/categories/actions/category-actions';
-import { CategoryFormSheet } from '@/app/(protected)/settings/categories/components/category-form-sheet';
-import { CategoriesTable } from '@/app/(protected)/settings/categories/components/categories-table';
 import { Button } from '@/components/ui/button';
 import type { CategoryRow } from '@/lib/categories/get-categories';
+
+import { CategoryFormSheet } from './category-form-sheet';
+import { CategoriesTable } from './categories-table';
 
 type CategoriesManagerProps = {
   categories: CategoryRow[];

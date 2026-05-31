@@ -6,6 +6,12 @@ import type { ImportedSpreadsheetRow, RowDuplicateStatus, RowValidation } from "
 import { getDuplicateTooltipMessage } from "@/lib/file-import";
 import type { ImportCategoryOption } from "@/lib/categories/get-active-categories-for-import";
 
+import { CategoryColorSwatch } from "@/components/categories/category-color-swatch";
+import {
+  TABLE_MONEY_CELL_CLASS,
+  TableMoneyCell,
+} from "@/components/data-table/table-money-cell";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +26,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDisplayDate, formatDisplayNumber } from "@/lib/formatters";
+import { formatDisplayDate } from "@/lib/formatters";
 
 export type PreviewRow = ImportedSpreadsheetRow & {
   validation: RowValidation;
@@ -78,6 +84,7 @@ const validationColumn: ColumnDef<PreviewRow> = {
 function createCategoryColumn(
   categories: ImportCategoryOption[],
   onCategoryChange: (rowIndex: number, categoryId: string | null) => void,
+  onCreateCategory: (description: string) => void,
 ): ColumnDef<PreviewRow> {
   return {
     id: "category",
@@ -85,77 +92,63 @@ function createCategoryColumn(
     cell: ({ row }) => {
       const categoryId = row.original.categoryId;
       const value = categoryId ?? NONE_CATEGORY_VALUE;
-
-      return (
-        <Select
-          value={value}
-          onValueChange={(next) => {
-            onCategoryChange(
-              row.index,
-              next === NONE_CATEGORY_VALUE ? null : next,
-            );
-          }}
-        >
-          <SelectTrigger className="w-full max-w-[220px]" size="sm">
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE_CATEGORY_VALUE}>None</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    },
-  };
-}
-
-function createAddCategoryColumn(
-  onCreateCategory: (description: string) => void,
-): ColumnDef<PreviewRow> {
-  return {
-    id: "add-category",
-    header: () => <span className="sr-only">New category</span>,
-    cell: ({ row }) => {
+      const selectedCategory = categoryId
+        ? categories.find((category) => category.id === categoryId)
+        : undefined;
       const description = row.original.description.trim();
 
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={() => onCreateCategory(description)}
-              disabled={!description}
-              aria-label="Create category from description"
-            >
-              <Plus />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Create category</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-2">
+          <Select
+            value={value}
+            onValueChange={(next) => {
+              onCategoryChange(
+                row.index,
+                next === NONE_CATEGORY_VALUE ? null : next,
+              );
+            }}
+          >
+            <SelectTrigger className="w-full max-w-[220px]" size="sm">
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_CATEGORY_VALUE}>None</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedCategory ? (
+            <CategoryColorSwatch
+              color={selectedCategory.color}
+              className="size-3"
+              label={selectedCategory.name}
+            />
+          ) : null}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() => onCreateCategory(description)}
+                disabled={!description}
+                aria-label="Create category from description"
+              >
+                <Plus />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Create category</TooltipContent>
+          </Tooltip>
+        </div>
       );
-    },
-    meta: {
-      headerClassName: "w-12",
-      cellClassName: "w-12",
     },
   };
 }
-
-const balanceColumn: ColumnDef<PreviewRow> = {
-  accessorKey: "balance",
-  header: () => <div className="text-right">Balance</div>,
-  cell: ({ row }) => (
-    <div className="text-right tabular-nums">
-      {formatDisplayNumber(row.getValue("balance"))}
-    </div>
-  ),
-};
 
 function getBaseColumns(
   categories: ImportCategoryOption[],
@@ -176,19 +169,22 @@ function getBaseColumns(
         <span className="whitespace-normal">{row.getValue("description")}</span>
       ),
     },
-    createCategoryColumn(categories, onCategoryChange),
-    createAddCategoryColumn(onCreateCategory),
+    createCategoryColumn(categories, onCategoryChange, onCreateCategory),
     {
       accessorKey: "value",
-      header: () => <div className="text-right">Value</div>,
+      header: () => <div className={TABLE_MONEY_CELL_CLASS}>Value</div>,
       cell: ({ row }) => (
-        <div className="text-right tabular-nums">
-          {formatDisplayNumber(row.getValue("value"))}
-        </div>
+        <TableMoneyCell value={row.getValue("value")} />
       ),
     },
   ];
 }
+
+const balanceColumn: ColumnDef<PreviewRow> = {
+  accessorKey: "balance",
+  header: () => <div className={TABLE_MONEY_CELL_CLASS}>Balance</div>,
+  cell: ({ row }) => <TableMoneyCell value={row.getValue("balance")} />,
+};
 
 export function getPreviewColumns(
   includeBalance: boolean,

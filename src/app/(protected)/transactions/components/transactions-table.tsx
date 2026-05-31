@@ -12,9 +12,13 @@ import {
   hasActiveTransactionFilters,
 } from '@/app/(protected)/transactions/lib/filter-transactions';
 import { CategoryPill } from '@/components/categories/category-pill';
+import {
+  TABLE_MONEY_CELL_CLASS,
+  TableMoneyCell,
+} from '@/components/data-table/table-money-cell';
 import { DataTableRowActions } from '@/components/data-table/row-actions';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { formatDisplayDate, formatDisplayNumber } from '@/lib/formatters';
+import { formatDisplayDate } from '@/lib/formatters';
 import { getMerchantLabelOrSlug } from '@/lib/merchants';
 
 export type TransactionRow = {
@@ -62,12 +66,8 @@ const columns: ColumnDef<TransactionRow>[] = [
   },
   {
     accessorKey: 'value',
-    header: () => <div className="text-right">Value</div>,
-    cell: ({ row }) => (
-      <div className="text-right tabular-nums">
-        {formatDisplayNumber(row.getValue('value'))}
-      </div>
-    ),
+    header: () => <div className={TABLE_MONEY_CELL_CLASS}>Value</div>,
+    cell: ({ row }) => <TableMoneyCell value={row.getValue('value')} />,
   },
   {
     accessorKey: 'merchant',

@@ -3,7 +3,11 @@
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
-import { formatDisplayDate, formatDisplayNumber } from '@/lib/formatters';
+import {
+  TABLE_MONEY_CELL_CLASS,
+  TableMoneyCell,
+} from '@/components/data-table/table-money-cell';
+import { formatDisplayDate } from '@/lib/formatters';
 
 export type ImportTransactionRow = {
   id: string;
@@ -33,12 +37,8 @@ const columns: ColumnDef<ImportTransactionRow>[] = [
   },
   {
     accessorKey: 'value',
-    header: () => <div className="text-right">Value</div>,
-    cell: ({ row }) => (
-      <div className="text-right tabular-nums">
-        {formatDisplayNumber(row.getValue('value'))}
-      </div>
-    ),
+    header: () => <div className={TABLE_MONEY_CELL_CLASS}>Value</div>,
+    cell: ({ row }) => <TableMoneyCell value={row.getValue('value')} />,
   },
 ];
 

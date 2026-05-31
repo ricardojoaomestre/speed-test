@@ -27,6 +27,7 @@ import {
   type Ref,
 } from 'react';
 
+import { CategoryColorSwatch } from '@/components/categories/category-color-swatch';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -100,7 +101,10 @@ function CategoryTableRow({
       <TableCell className="w-12">
         <span className="tabular-nums text-muted-foreground">{index + 1}</span>
       </TableCell>
-      <TableCell className="w-[20%]">
+      <TableCell className="w-12">
+        <CategoryColorSwatch color={category.color} label={category.name} />
+      </TableCell>
+      <TableCell className="w-[18%]">
         <span className="block truncate font-medium">{category.name}</span>
       </TableCell>
       <TableCell className="max-w-xs overflow-hidden">
@@ -184,7 +188,7 @@ function CategoriesTableBody({
     return (
       <TableBody>
         <TableRow>
-          <TableCell colSpan={7} className="p-0">
+          <TableCell colSpan={8} className="p-0">
             <Empty className="border-0 py-12">
               <EmptyHeader>
                 <EmptyTitle>No results</EmptyTitle>
@@ -234,6 +238,8 @@ function categoriesMatch(a: CategoryRow[], b: CategoryRow[]): boolean {
     return (
       item.id === other.id &&
       item.name === other.name &&
+      item.description === other.description &&
+      item.color === other.color &&
       item.pattern === other.pattern &&
       item.priority === other.priority &&
       item.active === other.active
@@ -319,7 +325,10 @@ export function CategoriesTable({
               <span className="sr-only">Reorder</span>
             </TableHead>
             <TableHead className="w-12">#</TableHead>
-            <TableHead className="w-[20%]">Name</TableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">Color</span>
+            </TableHead>
+            <TableHead className="w-[18%]">Name</TableHead>
             <TableHead className="max-w-xs">Pattern</TableHead>
             <TableHead className="w-28">Status</TableHead>
             <TableHead className="w-20">Active</TableHead>

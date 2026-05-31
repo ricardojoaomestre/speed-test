@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 
 import type { CategoryFormInput } from '@/app/(protected)/settings/categories/actions/category-actions';
+import { CategoryColorPicker } from '@/app/(protected)/settings/categories/components/category-color-picker';
 import { Button } from '@/components/ui/button';
 import {
   Field,
@@ -23,6 +24,10 @@ import {
 } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  getDefaultCategoryColor,
+  type CategoryColorToken,
+} from '@/lib/categories/category-colors';
 import type { CategoryRow } from '@/lib/categories/get-categories';
 
 type CategoryFormSheetProps = {
@@ -33,7 +38,9 @@ type CategoryFormSheetProps = {
   onSubmit: (input: CategoryFormInput) => Promise<{
     ok: boolean;
     error?: string;
-    fieldErrors?: Partial<Record<'name' | 'pattern', string>>;
+    fieldErrors?: Partial<
+      Record<'name' | 'pattern' | 'description' | 'color', string>
+    >;
   }>;
 };
 
@@ -50,15 +57,20 @@ function CategoryFormBody({
   onSubmit,
   onCancel,
 }: CategoryFormBodyProps) {
+  const [draftId] = useState(() => crypto.randomUUID());
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(category?.name ?? '');
+  const [description, setDescription] = useState(category?.description ?? '');
+  const [color, setColor] = useState<CategoryColorToken>(
+    category?.color ?? getDefaultCategoryColor(draftId),
+  );
   const [pattern, setPattern] = useState(
     category?.pattern ?? defaultPattern ?? '',
   );
   const [active, setActive] = useState(category?.active ?? true);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<'name' | 'pattern', string>>
+    Partial<Record<'name' | 'pattern' | 'description' | 'color', string>>
   >({});
 
   const isEditing = category !== null;
@@ -69,7 +81,14 @@ function CategoryFormBody({
     setFieldErrors({});
 
     startTransition(async () => {
-      const result = await onSubmit({ name, pattern, active });
+      const result = await onSubmit({
+        id: isEditing ? undefined : draftId,
+        name,
+        description,
+        color,
+        pattern,
+        active,
+      });
 
       if (!result.ok) {
         setFormError(result.error ?? 'Something went wrong.');
@@ -89,16 +108,50 @@ function CategoryFormBody({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Groceries"
+              maxLength={40}
               aria-invalid={Boolean(fieldErrors.name)}
               disabled={isPending}
               autoComplete="off"
             />
-            {isEditing ? (
-              <FieldDescription>
-                Renaming updates the label everywhere this category appears.
-              </FieldDescription>
-            ) : null}
+            <FieldDescription>
+              Short label shown on transactions (40 characters max).
+              {isEditing
+                ? ' Renaming updates the label everywhere this category appears.'
+                : null}
+            </FieldDescription>
             <FieldError>{fieldErrors.name}</FieldError>
+          </FieldContent>
+        </Field>
+
+        <Field data-invalid={Boolean(fieldErrors.description)}>
+          <FieldLabel htmlFor="category-description">Description</FieldLabel>
+          <FieldContent>
+            <Textarea
+              id="category-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Supermarket and convenience store purchases"
+              maxLength={500}
+              rows={3}
+              aria-invalid={Boolean(fieldErrors.description)}
+              disabled={isPending}
+            />
+            <FieldDescription>
+              Optional notes for your reference. Not shown on transactions.
+            </FieldDescription>
+            <FieldError>{fieldErrors.description}</FieldError>
+          </FieldContent>
+        </Field>
+
+        <Field data-invalid={Boolean(fieldErrors.color)}>
+          <FieldLabel>Color</FieldLabel>
+          <FieldContent>
+            <CategoryColorPicker
+              value={color}
+              onChange={setColor}
+              disabled={isPending}
+            />
+            <FieldError>{fieldErrors.color}</FieldError>
           </FieldContent>
         </Field>
 
@@ -180,7 +233,7 @@ export function CategoryFormSheet({
           <SheetTitle>{isEditing ? 'Edit category' : 'New category'}</SheetTitle>
           <SheetDescription>
             {isEditing
-              ? 'Update the name, pattern, or status. Transactions store the category by id, so renames show up automatically; pattern changes only affect new imports.'
+              ? 'Update the name, description, color, pattern, or status. Transactions store the category by id, so renames show up automatically; pattern changes only affect new imports.'
               : 'Create a rule to categorize matching transactions at import time.'}
           </SheetDescription>
         </SheetHeader>

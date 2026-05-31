@@ -17,6 +17,7 @@ export default async function TransactionsPage() {
       date: transactions.date,
       description: transactions.description,
       categoryName: categories.name,
+      categoryColor: categories.color,
       value: transactions.value,
       importId: transactions.importId,
       importFilename: imports.filename,

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
+import { CategoryPill } from '@/components/categories/category-pill';
 import { formatDisplayDate, formatDisplayNumber } from '@/lib/formatters';
 import { getMerchantLabelOrSlug } from '@/lib/merchants';
 
@@ -12,6 +13,7 @@ export type TransactionRow = {
   date: Date;
   description: string;
   categoryName: string | null;
+  categoryColor: string | null;
   value: string;
   importId: string;
   importFilename: string;
@@ -34,7 +36,15 @@ const columns: ColumnDef<TransactionRow>[] = [
   {
     accessorKey: 'categoryName',
     header: 'Category',
-    cell: ({ row }) => row.original.categoryName ?? '—',
+    cell: ({ row }) => {
+      const { categoryName, categoryColor } = row.original;
+
+      if (!categoryName || !categoryColor) {
+        return '—';
+      }
+
+      return <CategoryPill name={categoryName} color={categoryColor} />;
+    },
   },
   {
     accessorKey: 'value',

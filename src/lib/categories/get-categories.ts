@@ -2,10 +2,17 @@ import { asc } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { categories } from '@/db/schema';
+import {
+  getDefaultCategoryColor,
+  isCategoryColorToken,
+  type CategoryColorToken,
+} from '@/lib/categories/category-colors';
 
 export type CategoryRow = {
   id: string;
   name: string;
+  description: string | null;
+  color: CategoryColorToken;
   pattern: string;
   priority: number;
   active: boolean;
@@ -16,10 +23,20 @@ export async function getCategories(): Promise<CategoryRow[]> {
     .select({
       id: categories.id,
       name: categories.name,
+      description: categories.description,
+      color: categories.color,
       pattern: categories.pattern,
       priority: categories.priority,
       active: categories.active,
     })
     .from(categories)
-    .orderBy(asc(categories.priority));
+    .orderBy(asc(categories.priority))
+    .then((rows) =>
+      rows.map((row) => ({
+        ...row,
+        color: isCategoryColorToken(row.color)
+          ? row.color
+          : getDefaultCategoryColor(row.id),
+      })),
+    );
 }

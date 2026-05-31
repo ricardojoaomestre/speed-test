@@ -94,6 +94,8 @@ export const categories = pgTable('category', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull().unique(),
+  description: text('description'),
+  color: text('color').notNull(),
   pattern: text('pattern').notNull(),
   priority: integer('priority').notNull(),
   active: boolean('active').notNull().default(true),

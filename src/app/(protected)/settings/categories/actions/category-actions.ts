@@ -6,37 +6,69 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { db } from '@/db';
 import { categories } from '@/db/schema';
-import { formatDbError } from '@/lib/db/format-db-error';
+import type { CategoryColorToken } from '@/lib/categories/category-colors';
 import {
+  validateCategoryColor,
+  validateCategoryDescription,
   validateCategoryName,
   validateCategoryPattern,
 } from '@/lib/categories/validate-category';
+import { formatDbError } from '@/lib/db/format-db-error';
 
 type ActionResult =
   | { ok: true }
   | {
       ok: false;
       error: string;
-      fieldErrors?: Partial<Record<'name' | 'pattern', string>>;
+      fieldErrors?: Partial<
+        Record<'name' | 'pattern' | 'description' | 'color', string>
+      >;
     };
 
 export type CategoryFormInput = {
+  id?: string;
   name: string;
+  description: string;
+  color: CategoryColorToken;
   pattern: string;
   active: boolean;
 };
 
-function getFieldErrors(input: CategoryFormInput) {
-  const fieldErrors: Partial<Record<'name' | 'pattern', string>> = {};
-  const nameError = validateCategoryName(input.name);
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
+function getFieldErrors(
+  input: CategoryFormInput,
+  options?: { existingName?: string | null },
+) {
+  const fieldErrors: Partial<
+    Record<'name' | 'pattern' | 'description' | 'color', string>
+  > = {};
+  const nameError = validateCategoryName(input.name, {
+    existingName: options?.existingName,
+  });
+  const descriptionError = validateCategoryDescription(input.description);
   const patternError = validateCategoryPattern(input.pattern);
+  const colorError = validateCategoryColor(input.color);
 
   if (nameError) {
     fieldErrors.name = nameError;
   }
 
+  if (descriptionError) {
+    fieldErrors.description = descriptionError;
+  }
+
   if (patternError) {
     fieldErrors.pattern = patternError;
+  }
+
+  if (colorError) {
+    fieldErrors.color = colorError;
   }
 
   return fieldErrors;
@@ -106,9 +138,16 @@ export async function createCategory(
     };
   }
 
+  const id =
+    input.id && isUuid(input.id) ? input.id : crypto.randomUUID();
+  const description = input.description.trim() || null;
+
   try {
     await db.insert(categories).values({
+      id,
       name: input.name.trim(),
+      description,
+      color: input.color,
       pattern: input.pattern.trim(),
       active: input.active,
       priority: await getNextPriority(),
@@ -143,7 +182,16 @@ export async function updateCategory(
     return { ok: false, error: 'You must be signed in.' };
   }
 
-  const fieldErrors = getFieldErrors(input);
+  const [existing] = await db
+    .select({ name: categories.name })
+    .from(categories)
+    .where(eq(categories.id, id));
+
+  if (!existing) {
+    return { ok: false, error: 'Category not found.' };
+  }
+
+  const fieldErrors = getFieldErrors(input, { existingName: existing.name });
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
@@ -153,11 +201,15 @@ export async function updateCategory(
     };
   }
 
+  const description = input.description.trim() || null;
+
   try {
     const [updated] = await db
       .update(categories)
       .set({
         name: input.name.trim(),
+        description,
+        color: input.color,
         pattern: input.pattern.trim(),
         active: input.active,
         updatedAt: new Date(),

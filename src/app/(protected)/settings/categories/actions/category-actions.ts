@@ -184,6 +184,9 @@ export async function updateCategory(
   }
 
   revalidatePath('/settings/categories');
+  revalidatePath('/transactions');
+  revalidatePath('/imports');
+  revalidatePath('/dashboard');
   return { ok: true };
 }
 

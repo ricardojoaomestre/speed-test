@@ -93,6 +93,11 @@ function CategoryFormBody({
               disabled={isPending}
               autoComplete="off"
             />
+            {isEditing ? (
+              <FieldDescription>
+                Renaming updates the label everywhere this category appears.
+              </FieldDescription>
+            ) : null}
             <FieldError>{fieldErrors.name}</FieldError>
           </FieldContent>
         </Field>
@@ -111,8 +116,9 @@ function CategoryFormBody({
               className="font-mono text-sm"
             />
             <FieldDescription>
-              Regular expression matched against transaction descriptions
-              (case-insensitive).
+              {isEditing
+                ? 'Regular expression matched against transaction descriptions at import time (case-insensitive). Changes apply to future imports only; existing transactions keep their current category.'
+                : 'Regular expression matched against transaction descriptions (case-insensitive).'}
             </FieldDescription>
             <FieldError>{fieldErrors.pattern}</FieldError>
           </FieldContent>
@@ -174,7 +180,7 @@ export function CategoryFormSheet({
           <SheetTitle>{isEditing ? 'Edit category' : 'New category'}</SheetTitle>
           <SheetDescription>
             {isEditing
-              ? 'Update the name, pattern, or status for this category.'
+              ? 'Update the name, pattern, or status. Transactions store the category by id, so renames show up automatically; pattern changes only affect new imports.'
               : 'Create a rule to categorize matching transactions at import time.'}
           </SheetDescription>
         </SheetHeader>

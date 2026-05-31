@@ -122,7 +122,6 @@ export function CategoriesManager({ categories }: CategoriesManagerProps) {
       ) : null}
 
       <CategoriesTable
-        key={categories.map((category) => `${category.id}:${category.priority}`).join('|')}
         categories={categories}
         disabled={isPending}
         onEdit={openEdit}

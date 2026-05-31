@@ -18,7 +18,14 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVerticalIcon, PencilIcon } from 'lucide-react';
-import { useState, useSyncExternalStore, type CSSProperties, type Ref } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type Ref,
+} from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -217,6 +224,23 @@ function CategoriesTableBody({
   );
 }
 
+function categoriesMatch(a: CategoryRow[], b: CategoryRow[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  return a.every((item, index) => {
+    const other = b[index];
+    return (
+      item.id === other.id &&
+      item.name === other.name &&
+      item.pattern === other.pattern &&
+      item.priority === other.priority &&
+      item.active === other.active
+    );
+  });
+}
+
 export function CategoriesTable({
   categories,
   disabled = false,
@@ -226,7 +250,22 @@ export function CategoriesTable({
 }: CategoriesTableProps) {
   const [items, setItems] = useState(categories);
   const [isReordering, setIsReordering] = useState(false);
+  const isReorderingRef = useRef(false);
   const sortable = useIsClient();
+
+  useEffect(() => {
+    isReorderingRef.current = isReordering;
+  }, [isReordering]);
+
+  useEffect(() => {
+    if (isReorderingRef.current) {
+      return;
+    }
+
+    setItems((current) =>
+      categoriesMatch(current, categories) ? current : categories,
+    );
+  }, [categories]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),

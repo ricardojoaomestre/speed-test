@@ -4,7 +4,7 @@ export function validateCategoryPattern(pattern: string): string | null {
   const trimmed = pattern.trim();
 
   if (!trimmed) {
-    return 'Pattern is required.';
+    return null;
   }
 
   try {

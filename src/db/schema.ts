@@ -96,7 +96,7 @@ export const categories = pgTable('category', {
   name: text('name').notNull().unique(),
   description: text('description'),
   color: text('color').notNull(),
-  pattern: text('pattern').notNull(),
+  pattern: text('pattern'),
   priority: integer('priority').notNull(),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('createdAt', { mode: 'date' })

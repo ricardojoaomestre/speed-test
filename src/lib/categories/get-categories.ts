@@ -13,7 +13,7 @@ export type CategoryRow = {
   name: string;
   description: string | null;
   color: CategoryColorToken;
-  pattern: string;
+  pattern: string | null;
   priority: number;
   active: boolean;
 };

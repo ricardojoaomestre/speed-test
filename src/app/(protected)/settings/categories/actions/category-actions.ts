@@ -148,7 +148,7 @@ export async function createCategory(
       name: input.name.trim(),
       description,
       color: input.color,
-      pattern: input.pattern.trim(),
+      pattern: input.pattern.trim() || null,
       active: input.active,
       priority: await getNextPriority(),
       updatedAt: new Date(),
@@ -210,7 +210,7 @@ export async function updateCategory(
         name: input.name.trim(),
         description,
         color: input.color,
-        pattern: input.pattern.trim(),
+        pattern: input.pattern.trim() || null,
         active: input.active,
         updatedAt: new Date(),
       })

@@ -170,8 +170,8 @@ function CategoryFormBody({
             />
             <FieldDescription>
               {isEditing
-                ? 'Regular expression matched against transaction descriptions at import time (case-insensitive). Changes apply to future imports only; existing transactions keep their current category.'
-                : 'Regular expression matched against transaction descriptions (case-insensitive).'}
+                ? 'Optional regular expression matched against transaction descriptions at import time (case-insensitive). Changes apply to future imports only; existing transactions keep their current category.'
+                : 'Optional regular expression matched against transaction descriptions (case-insensitive).'}
             </FieldDescription>
             <FieldError>{fieldErrors.pattern}</FieldError>
           </FieldContent>

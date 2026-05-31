@@ -9,7 +9,7 @@ export type ImportCategoryOption = {
 };
 
 export type ImportCategoryRule = ImportCategoryOption & {
-  pattern: string;
+  pattern: string | null;
 };
 
 export async function getActiveCategoriesForImport(): Promise<

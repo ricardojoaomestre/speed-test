@@ -1,6 +1,6 @@
 export type CategoryRule = {
   id: string;
-  pattern: string;
+  pattern: string | null;
 };
 
 export function matchCategoryId(
@@ -8,8 +8,14 @@ export function matchCategoryId(
   rules: CategoryRule[],
 ): string | null {
   for (const rule of rules) {
+    const pattern = rule.pattern?.trim();
+
+    if (!pattern) {
+      continue;
+    }
+
     try {
-      const regex = new RegExp(rule.pattern, 'i');
+      const regex = new RegExp(pattern, 'i');
 
       if (regex.test(description)) {
         return rule.id;

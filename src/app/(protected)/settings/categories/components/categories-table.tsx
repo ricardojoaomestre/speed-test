@@ -108,12 +108,16 @@ function CategoryTableRow({
         <span className="block truncate font-medium">{category.name}</span>
       </TableCell>
       <TableCell className="max-w-xs overflow-hidden">
-        <code
-          className="block truncate text-xs text-muted-foreground"
-          title={category.pattern}
-        >
-          {category.pattern}
-        </code>
+        {category.pattern ? (
+          <code
+            className="block truncate text-xs text-muted-foreground"
+            title={category.pattern}
+          >
+            {category.pattern}
+          </code>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell className="w-28">
         {category.active ? (

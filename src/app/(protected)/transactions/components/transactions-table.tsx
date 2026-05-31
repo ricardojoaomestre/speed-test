@@ -1,9 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
+import { TransactionsTableFilters } from '@/app/(protected)/transactions/components/transactions-table-filters';
+import {
+  DEFAULT_TRANSACTION_FILTERS,
+  filterTransactions,
+  hasActiveTransactionFilters,
+} from '@/app/(protected)/transactions/lib/filter-transactions';
 import { CategoryPill } from '@/components/categories/category-pill';
 import { DataTableRowActions } from '@/components/data-table/row-actions';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -14,11 +21,17 @@ export type TransactionRow = {
   id: string;
   date: Date;
   description: string;
+  categoryId: string | null;
   categoryName: string | null;
   categoryColor: string | null;
   value: string;
   importId: string;
   merchant: string;
+};
+
+type CategoryFilterOption = {
+  id: string;
+  name: string;
 };
 
 const columns: ColumnDef<TransactionRow>[] = [
@@ -80,8 +93,26 @@ const columns: ColumnDef<TransactionRow>[] = [
 
 type TransactionsTableProps = {
   data: TransactionRow[];
+  categories: CategoryFilterOption[];
 };
 
-export function TransactionsTable({ data }: TransactionsTableProps) {
-  return <ImportDataTable columns={columns} data={data} />;
+export function TransactionsTable({ data, categories }: TransactionsTableProps) {
+  const [filters, setFilters] = useState(DEFAULT_TRANSACTION_FILTERS);
+  const filteredData = useMemo(
+    () => filterTransactions(data, filters),
+    [data, filters],
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <TransactionsTableFilters
+        filters={filters}
+        categories={categories}
+        onFiltersChange={setFilters}
+        onClear={() => setFilters(DEFAULT_TRANSACTION_FILTERS)}
+        showClear={hasActiveTransactionFilters(filters)}
+      />
+      <ImportDataTable columns={columns} data={filteredData} />
+    </div>
+  );
 }

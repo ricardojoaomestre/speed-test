@@ -9,22 +9,29 @@ import {
 } from '@/components/ui/empty';
 import { db } from '@/db';
 import { categories, transactions } from '@/db/schema';
+import { getCategories } from '@/lib/categories/get-categories';
 
 export default async function TransactionsPage() {
-  const rows = await db
-    .select({
-      id: transactions.id,
-      date: transactions.date,
-      description: transactions.description,
-      categoryName: categories.name,
-      categoryColor: categories.color,
-      value: transactions.value,
-      importId: transactions.importId,
-      merchant: transactions.merchant,
-    })
-    .from(transactions)
-    .leftJoin(categories, eq(transactions.categoryId, categories.id))
-    .orderBy(desc(transactions.date));
+  const [rows, categoryRows] = await Promise.all([
+    db
+      .select({
+        id: transactions.id,
+        date: transactions.date,
+        description: transactions.description,
+        categoryId: transactions.categoryId,
+        categoryName: categories.name,
+        categoryColor: categories.color,
+        value: transactions.value,
+        importId: transactions.importId,
+        merchant: transactions.merchant,
+      })
+      .from(transactions)
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .orderBy(desc(transactions.date)),
+    getCategories(),
+  ]);
+
+  const categoryOptions = categoryRows.map(({ id, name }) => ({ id, name }));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -44,7 +51,7 @@ export default async function TransactionsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <TransactionsTable data={rows} />
+        <TransactionsTable data={rows} categories={categoryOptions} />
       )}
     </div>
   );

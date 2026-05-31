@@ -1,5 +1,6 @@
 import { auth, signOut } from '@/auth';
 import { ProtectedNav } from '@/app/(protected)/components/protected-nav';
+import { ThemeModeToggle } from '@/components/theme-mode-toggle';
 import { Button } from '@/components/ui/button';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -31,16 +32,19 @@ export default async function ProtectedLayout({
             Signed in as {session.user.name ?? session.user.email}
           </p>
         </div>
-        <form
-          action={async () => {
-            'use server';
-            await signOut({ redirectTo: '/' });
-          }}
-        >
-          <Button type="submit" variant="outline" size="sm">
-            Sign out
-          </Button>
-        </form>
+        <div className="flex items-center gap-2">
+          <ThemeModeToggle />
+          <form
+            action={async () => {
+              'use server';
+              await signOut({ redirectTo: '/' });
+            }}
+          >
+            <Button type="submit" variant="outline" size="sm">
+              Sign out
+            </Button>
+          </form>
+        </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>
     </div>

@@ -5,6 +5,8 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 import { ImportDataTable } from '@/app/(protected)/dashboard/components/import-data-table';
 import { CategoryPill } from '@/components/categories/category-pill';
+import { DataTableRowActions } from '@/components/data-table/row-actions';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { formatDisplayDate, formatDisplayNumber } from '@/lib/formatters';
 import { getMerchantLabelOrSlug } from '@/lib/merchants';
 
@@ -16,7 +18,6 @@ export type TransactionRow = {
   categoryColor: string | null;
   value: string;
   importId: string;
-  importFilename: string;
   merchant: string;
 };
 
@@ -61,15 +62,18 @@ const columns: ColumnDef<TransactionRow>[] = [
     cell: ({ row }) => getMerchantLabelOrSlug(row.original.merchant),
   },
   {
-    id: 'import',
-    header: 'Import',
+    id: 'actions',
+    header: () => <span className="sr-only">Actions</span>,
+    meta: {
+      headerClassName: 'w-12',
+      cellClassName: 'w-12',
+    },
     cell: ({ row }) => (
-      <Link
-        href={`/imports/${row.original.importId}`}
-        className="text-primary underline-offset-4 hover:underline"
-      >
-        {row.original.importFilename}
-      </Link>
+      <DataTableRowActions>
+        <DropdownMenuItem asChild>
+          <Link href={`/imports/${row.original.importId}`}>View import</Link>
+        </DropdownMenuItem>
+      </DataTableRowActions>
     ),
   },
 ];

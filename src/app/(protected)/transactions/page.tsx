@@ -8,7 +8,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { db } from '@/db';
-import { categories, imports, transactions } from '@/db/schema';
+import { categories, transactions } from '@/db/schema';
 
 export default async function TransactionsPage() {
   const rows = await db
@@ -20,11 +20,9 @@ export default async function TransactionsPage() {
       categoryColor: categories.color,
       value: transactions.value,
       importId: transactions.importId,
-      importFilename: imports.filename,
       merchant: transactions.merchant,
     })
     .from(transactions)
-    .innerJoin(imports, eq(transactions.importId, imports.id))
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .orderBy(desc(transactions.date));
 
